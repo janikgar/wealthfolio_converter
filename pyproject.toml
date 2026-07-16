@@ -1,0 +1,10 @@
+[project]
+name = "vanguard-converter"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "duckdb>=1.5.4",
+    "numpy>=2.5.1",
+]
