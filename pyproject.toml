@@ -8,3 +8,8 @@ dependencies = [
     "duckdb>=1.5.4",
     "numpy>=2.5.1",
 ]
+
+[dependency-groups]
+dev = [
+    "black>=26.5.1",
+]
