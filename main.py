@@ -4,6 +4,8 @@ import re
 import tempfile
 import sys
 import os
+from decimal import Decimal
+from duckdb.func import SPECIAL
 
 
 def preprocess_vanguard_csv(csvfile: str) -> str:
@@ -77,13 +79,26 @@ def wealthfolio_reshape(conn: duckdb.DuckDBPyConnection) -> duckdb.DuckDBPyRelat
                 'EQUITY' as "instrumentType",
                 COALESCE(IF(Shares == 0, 1, Shares), 1) as "quantity",
                 map_activity_types("Transaction Type") AS "activityType",
-                COALESCE("Share Price", 1) AS "unitPrice",
+                coalesce_missing_unit_price("Shares", "Share Price", "Net Amount") AS "unitPrice",
                 'USD' AS "currency",
                 "Commissions and Fees" as "fee",
                 "Net Amount" AS "amount",
                 "Transaction Description" AS "comment",
             """).to_table("wealthfolio")
     return conn.table("wealthfolio")
+
+
+def coalesce_missing_unit_price(quantity: Decimal, unit_price: Decimal, amount: Decimal) -> Decimal:
+    if not quantity:
+        quantity = Decimal("1")
+    if not amount:
+        amount = Decimal("1")
+    if unit_price == 0 and quantity == 0:
+        return amount
+    if unit_price == 0 or unit_price is None:
+        return amount / quantity
+
+    return unit_price
 
 
 def wf_map_activity_types(value: str) -> str:
@@ -102,7 +117,7 @@ def wf_map_activity_types(value: str) -> str:
         "TAX",
         "ADJUSTMENT"
     }
-        
+
     if re.match(r"Reinvestment|Capital gain.*", value):
         value = "BUY"
 
@@ -128,10 +143,19 @@ if __name__ == "__main__":
     conn.create_function(
         "map_activity_types",
         wf_map_activity_types,
-        [str],
-        str
-        )
+        ["VARCHAR"],
+        "VARCHAR"
+    )
+
+    conn.create_function(
+        "coalesce_missing_unit_price",
+        coalesce_missing_unit_price,
+        ["DECIMAL", "DECIMAL", "DECIMAL"],
+        "DECIMAL",
+        null_handling=SPECIAL,
+    )
 
     wf_table = wealthfolio_reshape(conn)
 
     wf_table.show()
+    wf_table.to_csv('vanguard_converted.csv')
