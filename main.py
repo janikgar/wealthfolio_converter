@@ -2,6 +2,7 @@
 import duckdb
 import sys
 from vanguard import Vanguard
+from fidelity import Fidelity
 
 
 if __name__ == "__main__":
@@ -13,11 +14,20 @@ if __name__ == "__main__":
     # conn = duckdb.connect("vanguard.duckdb")
     conn = duckdb.connect()
 
-    vanguard_import = Vanguard(filename=filename, conn=conn)
-    vanguard_import.pre_process()
-    vanguard_import.import_csv()
+    # vanguard_import = Vanguard(filename=filename, conn=conn)
+    # vanguard_import.pre_process()
+    # vanguard_import.import_csv()
 
-    wf_table = vanguard_import.reshape()
+    # wf_table = vanguard_import.reshape()
 
-    wf_table.show()
-    wf_table.to_csv("vanguard_converted.csv")
+    # wf_table.show()
+    # wf_table.to_csv("vanguard_converted.csv")
+
+    fidelity_import = Fidelity(filename=filename, conn=conn)
+    fidelity_import.pre_process()
+    fidelity_import.import_csv()
+
+    fd_table = fidelity_import.reshape()
+
+    fd_table.show()
+    fd_table.to_csv("fidelity_converted.csv")
