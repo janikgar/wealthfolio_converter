@@ -1,5 +1,5 @@
 [project]
-name = "vanguard-converter"
+name = "wf-converter"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -12,4 +12,5 @@ dependencies = [
 [dependency-groups]
 dev = [
     "black>=26.5.1",
+    "pytest>=9.1.1",
 ]

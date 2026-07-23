@@ -87,7 +87,7 @@ DEFAULT_FUNCTIONS = [
 class Vanguard(ImportSource):
     filename: str
     conn: DuckDBPyConnection
-    source_name = "vanguard"
+    source_name: str = "vanguard"
     columns: Dict[str, str] = field(default_factory=lambda: VG_COLUMNS)
     start_row_regex: str = r"Trade"
     pre_process_funcs: list[PreProcessPattern] = field(

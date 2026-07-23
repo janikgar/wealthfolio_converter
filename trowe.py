@@ -29,17 +29,6 @@ def tr_map_funds(name: str) -> str:
         return TR_FUNDS[name]
     return name
 
-
-# def tr_coalesce_price_and_amount(
-#     activity: str, price: Decimal, amount: Decimal
-# ) -> tuple[Decimal, Decimal]:
-#     if activity == "Rounding Adjustment":
-#         pass
-#     if activity == "Market Fluctuation":
-#         return Decimal("1"), Decimal("1")
-#     return price, price
-
-
 DEFAULT_PREPROCESS = [
     # remove literal dollar signs
     PreProcessPattern(r"\$", ""),

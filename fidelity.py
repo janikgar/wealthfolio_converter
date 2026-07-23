@@ -7,6 +7,22 @@ from internal import ImportSource, PreProcessPattern, DuckDbFunction, WF_TYPES
 import re
 
 
+FD_FUNDS: Dict[str, str] = {
+    "AF EUPAC FUND R6": "RERGX",
+    "TCW MW TOT RTN BD P": "MWTRX",
+    "PRMCP ODYSSEY GROWTH": "POGRX",
+    "DFA US LG CAP VAL": "DFLVX",
+    "VANG TARGET RET 2055": "VFFVX",
+    "FID 500 INDEX": "FXAIX",
+    "DODGE & COX INCOME X": "DOXIX",
+}
+
+
+def fd_map_funds(name: str) -> str:
+    if name in set(FD_FUNDS.keys()):
+        return FD_FUNDS[name]
+    return name
+
 def fd_map_activity_types(action: str) -> str:
     if re.match(r"(YOU BOUGHT|REINVESTMENT).*", action):
         action = "BUY"
@@ -83,6 +99,12 @@ DEFAULT_FUNCTIONS = [
         "DECIMAL",
         null_handling=SPECIAL,
     ),
+    DuckDbFunction(
+        "fd_map_funds",
+        fd_map_funds,
+        ["VARCHAR"],
+        "VARCHAR",
+    ),
 ]
 
 FD_COLUMNS: Dict[str, str] = {
@@ -124,7 +146,7 @@ class Fidelity(ImportSource):
         self.conn.sql("""FROM transactions SELECT
                 concat_ws(' ', "Account Number", "Account") AS "account",
                 "Run Date" AS "date",
-                Symbol as "symbol",
+                COALESCE(Symbol, fd_map_funds(Description), '') as "symbol",
                 'EQUITY' as "instrumentType",
                 COALESCE(IF(Quantity == 0, 1, Quantity), 1) as "quantity",
                 IF(regexp_matches("Action", '^(Exchanges|Realized)'), fd_map_exchange_activity("Amount"), fd_map_activity_types("Action")) AS "activityType",

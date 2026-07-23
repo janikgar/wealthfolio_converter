@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import duckdb
+import sys
+from internal import ImportSource
 from vanguard import Vanguard
 from fidelity import Fidelity
 from argparse import ArgumentParser, Namespace
@@ -39,31 +41,23 @@ if __name__ == "__main__":
 
     conn = duckdb.connect()
 
+    import_object: ImportSource
+
     if args.format == "vanguard":
-        vanguard_import = Vanguard(filename=args.input, conn=conn)
-        vanguard_import.pre_process()
-        vanguard_import.import_csv()
+        import_object = Vanguard(filename=args.input, conn=conn)
 
-        wf_table = vanguard_import.reshape()
+    elif args.format == "fidelity":
+        import_object = Fidelity(filename=args.input, conn=conn)
 
-        wf_table.show()
-        wf_table.to_csv(args.output)
+    elif args.format == "trowe":
+        import_object = TRowe(filename=args.input, conn=conn)
 
-    if args.format == "fidelity":
-        fidelity_import = Fidelity(filename=args.input, conn=conn)
-        fidelity_import.pre_process()
-        fidelity_import.import_csv()
+    else:
+        sys.exit(0)
 
-        fd_table = fidelity_import.reshape()
+    import_object.pre_process()
+    import_object.import_csv()
 
-        fd_table.show()
-        fd_table.to_csv(args.output)
-
-    if args.format == "trowe":
-        trowe_import = TRowe(filename=args.input, conn=conn)
-        trowe_import.pre_process()
-        trowe_import.import_csv()
-
-        tr_table = trowe_import.reshape()
-        tr_table.show()
-        tr_table.to_csv(args.output)
+    output_table = import_object.reshape()
+    output_table.show()
+    output_table.to_csv(args.output)
