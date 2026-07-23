@@ -30,6 +30,10 @@ class PreProcessPattern:
     debug: bool = False
 
     def exec(self, line: str) -> str:
+        if self.match == "":
+            if self.debug:
+                print("match empty; skipping substitution")
+            return line
         subst = re.sub(self.match, self.sub, line)
         if self.debug and subst != "":
             print(subst)
