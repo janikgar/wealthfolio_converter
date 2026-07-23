@@ -29,10 +29,11 @@ def tr_map_funds(name: str) -> str:
         return TR_FUNDS[name]
     return name
 
+
 DEFAULT_PREPROCESS = [
     # remove literal dollar signs
     PreProcessPattern(r"\$", ""),
-    PreProcessPattern(r"^.*(Rounding Adjustment|Market Fluctuation).*", "")
+    PreProcessPattern(r"^.*(Rounding Adjustment|Market Fluctuation).*", ""),
 ]
 
 

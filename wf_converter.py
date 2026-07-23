@@ -15,14 +15,16 @@ def parse_args() -> Namespace:
                        CSVs to Wealthfolio's format""",
     )
     ap.add_argument(
-        "--format", "-f",
+        "--format",
+        "-f",
         help="format of input CSV",
         choices=["fidelity", "vanguard", "trowe"],
         type=str,
         required=True,
     )
     ap.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         help="output filename",
         type=str,
         required=True,

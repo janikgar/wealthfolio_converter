@@ -6,7 +6,6 @@ from decimal import Decimal
 from internal import ImportSource, PreProcessPattern, DuckDbFunction, WF_TYPES
 import re
 
-
 FD_FUNDS: Dict[str, str] = {
     "AF EUPAC FUND R6": "RERGX",
     "TCW MW TOT RTN BD P": "MWTRX",
@@ -22,6 +21,7 @@ def fd_map_funds(name: str) -> str:
     if name in set(FD_FUNDS.keys()):
         return FD_FUNDS[name]
     return name
+
 
 def fd_map_activity_types(action: str) -> str:
     if re.match(r"(YOU BOUGHT|REINVESTMENT).*", action):
