@@ -57,7 +57,7 @@ class ImportSource:
     columns: Dict[str, str] = field(default_factory=Dict[str, str])
 
     def __post_init__(self):
-        (_, self.temp_filename) = mkstemp(
+        _, self.temp_filename = mkstemp(
             prefix=f"{self.source_name}-", suffix=".csv", text=True
         )
 
@@ -67,7 +67,10 @@ class ImportSource:
             for line in _c.readlines():
                 if re.search(self.start_row_regex, line) is not None:
                     lines.clear()
-                if re.search(self.stop_before_row_regex, line) is not None:
+                if (
+                    re.search(self.stop_before_row_regex, line) is not None
+                    and self.stop_before_row_regex != ""
+                ):
                     break
                 for func in self.pre_process_funcs:
                     line = func.exec(line)

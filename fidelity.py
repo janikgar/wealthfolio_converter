@@ -23,7 +23,10 @@ def fd_map_activity_types(action: str) -> str:
     if re.match(r"(.*ROLLOVER FROM|TRANSFERRED FROM).*", action):
         action = "TRANSFER IN"
 
-    if re.match(r"(WITHDRAWALS|DIRECT DEBIT|DEBIT CARD PURCHASE|Electronic Funds Transfer Paid)", action):
+    if re.match(
+        r"(WITHDRAWALS|DIRECT DEBIT|DEBIT CARD PURCHASE|Electronic Funds Transfer Paid)",
+        action,
+    ):
         action = "WITHDRAWAL"
 
     if re.match(r"(TRANSFERRED TO|TRANSFER OF ASSETS ACAT).*", action):
@@ -66,18 +69,20 @@ def fd_coalesce_missing_unit_price(
 
 
 DEFAULT_FUNCTIONS = [
-    DuckDbFunction("fd_map_activity_types",
-                   fd_map_activity_types, ["VARCHAR"], "VARCHAR"),
-    DuckDbFunction("fd_add_subtype",
-                   fd_add_subtype, ["VARCHAR"], "VARCHAR"),
-    DuckDbFunction("fd_map_exchange_activity",
-                   fd_map_exchange_activity, ["DECIMAL"], "VARCHAR"),
-    DuckDbFunction("fd_coalesce_missing_unit_price",
-                   fd_coalesce_missing_unit_price,
-                   ["DECIMAL", "DECIMAL", "DECIMAL"],
-                   "DECIMAL",
-                   null_handling=SPECIAL,
-                   ),
+    DuckDbFunction(
+        "fd_map_activity_types", fd_map_activity_types, ["VARCHAR"], "VARCHAR"
+    ),
+    DuckDbFunction("fd_add_subtype", fd_add_subtype, ["VARCHAR"], "VARCHAR"),
+    DuckDbFunction(
+        "fd_map_exchange_activity", fd_map_exchange_activity, ["DECIMAL"], "VARCHAR"
+    ),
+    DuckDbFunction(
+        "fd_coalesce_missing_unit_price",
+        fd_coalesce_missing_unit_price,
+        ["DECIMAL", "DECIMAL", "DECIMAL"],
+        "DECIMAL",
+        null_handling=SPECIAL,
+    ),
 ]
 
 FD_COLUMNS: Dict[str, str] = {
@@ -112,11 +117,11 @@ class Fidelity(ImportSource):
     stop_before_row_regex: str = r"The data and information"
     pre_process_funcs: list[PreProcessPattern] = field(default_factory=list)
     db_functions: list[DuckDbFunction] = field(
-        default_factory=lambda: DEFAULT_FUNCTIONS)
+        default_factory=lambda: DEFAULT_FUNCTIONS
+    )
 
     def reshape(self) -> DuckDBPyRelation:
-        self.conn.sql(
-            """FROM transactions SELECT
+        self.conn.sql("""FROM transactions SELECT
                 concat_ws(' ', "Account Number", "Account") AS "account",
                 "Run Date" AS "date",
                 Symbol as "symbol",
@@ -129,6 +134,5 @@ class Fidelity(ImportSource):
                 "Amount" AS "amount",
                 IF("Description" == 'No Description', "Action", "Description") AS "comment",
                 fd_add_subtype("Action") AS "subtype",
-            """
-        ).to_table(self.source_name)
+            """).to_table(self.source_name)
         return self.conn.table(self.source_name)

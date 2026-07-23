@@ -11,7 +11,6 @@ import re
 from dataclasses import dataclass, field
 from typing import Dict
 
-
 VG_COLUMNS = {
     "Account Number": "bigint",
     "Trade Date": "date",
@@ -71,7 +70,9 @@ DEFAULT_PREPROCESS = [
 ]
 
 DEFAULT_FUNCTIONS = [
-    DuckDbFunction("vg_map_activity_types", vg_map_activity_types, ["VARCHAR"], "VARCHAR"),
+    DuckDbFunction(
+        "vg_map_activity_types", vg_map_activity_types, ["VARCHAR"], "VARCHAR"
+    ),
     DuckDbFunction(
         "vg_coalesce_missing_unit_price",
         vg_coalesce_missing_unit_price,
@@ -97,8 +98,7 @@ class Vanguard(ImportSource):
     )
 
     def reshape(self) -> DuckDBPyRelation:
-        self.conn.sql(
-            """FROM transactions SELECT
+        self.conn.sql("""FROM transactions SELECT
                 "Account Number" AS "account",
                 "Trade Date" AS "date",
                 Symbol as "symbol",
@@ -110,6 +110,5 @@ class Vanguard(ImportSource):
                 "Commissions and Fees" as "fee",
                 "Net Amount" AS "amount",
                 "Transaction Description" AS "comment",
-            """
-        ).to_table(self.source_name)
+            """).to_table(self.source_name)
         return self.conn.table(self.source_name)
