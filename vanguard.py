@@ -90,8 +90,29 @@ def vg_coalesce_missing_unit_price(
 
 
 def vg_map_activity_types(action: str) -> str:
-    if re.match(r"Reinvestment|Capital gain.*", action):
+    if re.match(r"Buy|Reinvestment|Capital gain.*", action):
         action = "BUY"
+
+    if re.match(r"Sell", action):
+        action = "SELL"
+
+    if re.match(r"(Funds Received|(Transfer|Rollover) \(incoming\))", action, re.IGNORECASE):
+        action = "TRANSFER IN"
+
+    if re.match(r"(Transfer|Rollover)(| To)(| \(Outgoing\))", action, re.IGNORECASE):
+        action = "TRANSFER OUT"
+
+    if re.match(r"adjustment", action):
+        action = "ADJUSTMENT"
+
+    if re.match(r"Withholding", action):
+        action = "TAX"
+
+    if re.match(r"Contribution", action):
+        action = "DEPOSIT"
+
+    if re.match(r"Distribution", action):
+        action = "WITHDRAWAL"
 
     possible_match = WF_TYPES.intersection([action.upper()])
 
@@ -102,6 +123,8 @@ def vg_map_activity_types(action: str) -> str:
 
 
 DEFAULT_PREPROCESS = [
+    # drop all sweep lines
+    PreProcessPattern(r".*(Sweep|Conversion|Recharacterization).*", ""),
     # remove literal dollar signs
     PreProcessPattern(r"\$", ""),
     # remove lines with all commas
