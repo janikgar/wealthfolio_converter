@@ -2,16 +2,19 @@ from internal import (
     ImportSource,
     PreProcessPattern,
     DuckDbFunction,
+    WFLogger,
     WF_TYPES,
 )
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from duckdb.func import SPECIAL
 from decimal import Decimal
 import re
+import csv
+import os.path
 from dataclasses import dataclass, field
 from typing import Dict
 
-VG_COLUMNS = {
+VG_COLUMNS : Dict[str, str] = {
     "Account Number": "bigint",
     "Trade Date": "date",
     "Settlement Date": "date",
@@ -27,6 +30,48 @@ VG_COLUMNS = {
     "Accrued Interest": "decimal",
     "Account Type": "varchar",
 }
+
+VG_QUERY : str = """
+    FROM transactions SELECT
+    "Account Number" AS "account",
+    "Trade Date" AS "date",
+    Symbol as "symbol",
+    'EQUITY' as "instrumentType",
+    COALESCE(IF(Shares == 0, 1, Shares), 1) as "quantity",
+    vg_map_activity_types("Transaction Type") AS "activityType",
+    vg_coalesce_missing_unit_price("Shares", "Share Price", "Net Amount") AS "unitPrice",
+    'USD' AS "currency",
+    "Commissions and Fees" as "fee",
+    "Net Amount" AS "amount",
+    "Transaction Description" AS "comment",
+"""
+
+VG_XLSX_COLUMNS: Dict[str, str] = {
+    "Settlement Date": "date",
+    "Trade Date": "date",
+    "Symbol": "varchar",
+    "Investment Name": "varchar",
+    "Transaction Type": "varchar",
+    "Account Type": "varchar",
+    "Quantity": "decimal",
+    "Price": "decimal",
+    "Commission & fees**": "decimal",
+    "Amount": "decimal",
+}
+
+VG_XLSX_QUERY : str = """
+    FROM transactions SELECT
+    "Trade Date" as "date",
+    Symbol as "symbol",
+    'EQUITY' as "instrumentType",
+    COALESCE(IF(Quantity == 0, 1, Quantity), 1) as "quantity",
+    vg_map_activity_types("Transaction Type") AS "activityType",
+    vg_coalesce_missing_unit_price("Quantity", "Price", "Amount") AS "unitPrice",
+    'USD' AS "currency",
+    "Commission & fees**" as "fee",
+    "Amount" AS "amount",
+    "Investment Name" AS "comment",
+"""
 
 
 def vg_coalesce_missing_unit_price(
@@ -57,6 +102,8 @@ def vg_map_activity_types(action: str) -> str:
 
 
 DEFAULT_PREPROCESS = [
+    # remove literal dollar signs
+    PreProcessPattern(r"\$", ""),
     # remove lines with all commas
     PreProcessPattern(r"^(?:,|\s)*$", ""),
     # replace all quoted accounting negatives
@@ -87,6 +134,8 @@ DEFAULT_FUNCTIONS = [
 class Vanguard(ImportSource):
     filename: str
     conn: DuckDBPyConnection
+    log: WFLogger
+    query: str = VG_QUERY
     source_name: str = "vanguard"
     columns: Dict[str, str] = field(default_factory=lambda: VG_COLUMNS)
     start_row_regex: str = r"Trade"
@@ -97,18 +146,37 @@ class Vanguard(ImportSource):
         default_factory=lambda: DEFAULT_FUNCTIONS
     )
 
+    def xlsx_to_csv(self):
+        self.log.info("converting Vanguard xlsx to csv")
+        self.conn.install_extension("excel")
+        self.conn.load_extension("excel")
+
+        temp_table = self.conn.execute(
+            "SELECT * FROM read_xlsx(?, range = 'A4:J')", [self.filename]).fetchall()
+
+        self.log.info(f"raw XLSX has {len(temp_table)} rows")
+
+        filtered_table = [row for row in temp_table if None not in row]
+
+        self.log.info(f"filtered XLSX has {len(filtered_table)} rows")
+
+        csv_filebase, _ = os.path.splitext(os.path.basename(self.filename))
+        csv_filename = f'{csv_filebase}.csv'
+        with open(csv_filename, 'w') as _csv:
+            csv_writer = csv.writer(_csv)
+            csv_writer.writerow(VG_XLSX_COLUMNS.keys())
+            csv_writer.writerows(filtered_table)
+
+        self.log.info(f"converted XLSX written to {csv_filename}")
+
+        # mutate object with newly-created file, separate columns,
+        # and separate regex to stop ingesting data
+        self.filename = csv_filename
+        self.columns = VG_XLSX_COLUMNS
+        self.stop_before_row_regex = "DISCLOSURES"
+        self.query = VG_XLSX_QUERY
+
     def reshape(self) -> DuckDBPyRelation:
-        self.conn.sql("""FROM transactions SELECT
-                "Account Number" AS "account",
-                "Trade Date" AS "date",
-                Symbol as "symbol",
-                'EQUITY' as "instrumentType",
-                COALESCE(IF(Shares == 0, 1, Shares), 1) as "quantity",
-                vg_map_activity_types("Transaction Type") AS "activityType",
-                vg_coalesce_missing_unit_price("Shares", "Share Price", "Net Amount") AS "unitPrice",
-                'USD' AS "currency",
-                "Commissions and Fees" as "fee",
-                "Net Amount" AS "amount",
-                "Transaction Description" AS "comment",
-            """).to_table(self.source_name)
+        self.log.info(f"reshaping {self.source_name}-formatted file to table")
+        self.conn.sql(self.query).to_table(self.source_name)
         return self.conn.table(self.source_name)

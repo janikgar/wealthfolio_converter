@@ -3,7 +3,7 @@ from typing import Dict
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
 from duckdb.func import SPECIAL
 from decimal import Decimal
-from internal import ImportSource, PreProcessPattern, DuckDbFunction, WF_TYPES
+from internal import ImportSource, PreProcessPattern, DuckDbFunction, WFLogger, WF_TYPES
 import re
 
 FD_FUNDS: Dict[str, str] = {
@@ -15,6 +15,23 @@ FD_FUNDS: Dict[str, str] = {
     "FID 500 INDEX": "FXAIX",
     "DODGE & COX INCOME X": "DOXIX",
 }
+
+
+FD_QUERY : str = """
+    FROM transactions SELECT
+    concat_ws(' ', "Account Number", "Account") AS "account",
+    "Run Date" AS "date",
+    COALESCE(Symbol, fd_map_funds(Description), '') as "symbol",
+    'EQUITY' as "instrumentType",
+    COALESCE(IF(Quantity == 0, 1, Quantity), 1) as "quantity",
+    IF(regexp_matches("Action", '^(Exchanges|Realized)'), fd_map_exchange_activity("Amount"), fd_map_activity_types("Action")) AS "activityType",
+    fd_coalesce_missing_unit_price("Quantity", "Price", "Amount") AS "unitPrice",
+    'USD' AS "currency",
+    "Commission" + "Fees" as "fee",
+    "Amount" AS "amount",
+    IF("Description" == 'No Description', "Action", "Description") AS "comment",
+    fd_add_subtype("Action") AS "subtype",
+"""
 
 
 def fd_map_funds(name: str) -> str:
@@ -133,6 +150,7 @@ FD_COLUMNS: Dict[str, str] = {
 class Fidelity(ImportSource):
     filename: str
     conn: DuckDBPyConnection
+    log: WFLogger
     columns: Dict[str, str] = field(default_factory=lambda: FD_COLUMNS)
     source_name: str = "fidelity"
     start_row_regex: str = r"Run Date"
@@ -143,18 +161,5 @@ class Fidelity(ImportSource):
     )
 
     def reshape(self) -> DuckDBPyRelation:
-        self.conn.sql("""FROM transactions SELECT
-                concat_ws(' ', "Account Number", "Account") AS "account",
-                "Run Date" AS "date",
-                COALESCE(Symbol, fd_map_funds(Description), '') as "symbol",
-                'EQUITY' as "instrumentType",
-                COALESCE(IF(Quantity == 0, 1, Quantity), 1) as "quantity",
-                IF(regexp_matches("Action", '^(Exchanges|Realized)'), fd_map_exchange_activity("Amount"), fd_map_activity_types("Action")) AS "activityType",
-                fd_coalesce_missing_unit_price("Quantity", "Price", "Amount") AS "unitPrice",
-                'USD' AS "currency",
-                "Commission" + "Fees" as "fee",
-                "Amount" AS "amount",
-                IF("Description" == 'No Description', "Action", "Description") AS "comment",
-                fd_add_subtype("Action") AS "subtype",
-            """).to_table(self.source_name)
+        self.conn.sql(FD_QUERY).to_table(self.source_name)
         return self.conn.table(self.source_name)

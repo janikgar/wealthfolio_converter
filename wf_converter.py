@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import duckdb
 import sys
-from internal import ImportSource
+from internal import ImportSource, WFLogger
 from vanguard import Vanguard
 from fidelity import Fidelity
 from argparse import ArgumentParser, Namespace
@@ -17,8 +17,8 @@ def parse_args() -> Namespace:
     ap.add_argument(
         "--format",
         "-f",
-        help="format of input CSV",
-        choices=["fidelity", "vanguard", "trowe"],
+        help="format of input file",
+        choices=["fidelity", "vanguard", "vanguard-xlsx", "trowe"],
         type=str,
         required=True,
     )
@@ -39,22 +39,35 @@ def parse_args() -> Namespace:
 
 
 if __name__ == "__main__":
+    log = WFLogger("main", "DEBUG")
+    log.init()
     args = parse_args()
 
     conn = duckdb.connect()
 
     import_object: ImportSource
+    import_args = {
+        "filename": args.input,
+        "conn": conn,
+        "log": log,
+    }
 
-    if args.format == "vanguard":
-        import_object = Vanguard(filename=args.input, conn=conn)
+    log.info(f"using format {args.format}")
+    if args.format == "vanguard-xlsx":
+        import_object = Vanguard(**import_args)
+        import_object.xlsx_to_csv()
+
+    elif args.format == "vanguard":
+        import_object = Vanguard(**import_args)
 
     elif args.format == "fidelity":
-        import_object = Fidelity(filename=args.input, conn=conn)
+        import_object = Fidelity(**import_args)
 
     elif args.format == "trowe":
-        import_object = TRowe(filename=args.input, conn=conn)
+        import_object = TRowe(**import_args)
 
     else:
+        log.error(f"could not parse format {args.format}")
         sys.exit(0)
 
     import_object.pre_process()
@@ -62,4 +75,6 @@ if __name__ == "__main__":
 
     output_table = import_object.reshape()
     output_table.show()
+
+    log.info(f"writing final output to {args.output}")
     output_table.to_csv(args.output)

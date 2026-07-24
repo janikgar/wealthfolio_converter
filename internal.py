@@ -4,6 +4,7 @@ from tempfile import mkstemp
 from duckdb.func import FunctionNullHandling, DEFAULT, NATIVE
 from duckdb import DuckDBPyConnection, InvalidInputException
 from dataclasses import dataclass, field
+from logging import Logger, StreamHandler, Formatter
 import os
 
 WF_TYPES = {
@@ -27,16 +28,14 @@ WF_TYPES = {
 class PreProcessPattern:
     match: str
     sub: str
-    debug: bool = False
+    log: Logger = field(default_factory=lambda: WFLogger("main"))
 
     def exec(self, line: str) -> str:
         if self.match == "":
-            if self.debug:
-                print("match empty; skipping substitution")
+            self.log.debug("match empty; skipping substitution")
             return line
         subst = re.sub(self.match, self.sub, line)
-        if self.debug and subst != "":
-            print(subst)
+        self.log.debug(subst)
         return subst
 
 
@@ -53,6 +52,7 @@ class DuckDbFunction:
 class ImportSource:
     filename: str
     conn: DuckDBPyConnection
+    log: WFLogger
     start_row_regex: str = ""
     stop_before_row_regex: str = ""
     source_name: str = ""
@@ -64,8 +64,10 @@ class ImportSource:
         _, self.temp_filename = mkstemp(
             prefix=f"{self.source_name}-", suffix=".csv", text=True
         )
+        self.log.info(f"created temp file {self.temp_filename}")
 
     def pre_process(self):
+        self.log.info("beginning pre-processing")
         with open(self.filename) as _c:
             lines: list[str] = []
             for line in _c.readlines():
@@ -81,9 +83,11 @@ class ImportSource:
                 if line != "":
                     lines.append(line)
         with open(self.temp_filename, "w") as _temp:
+            self.log.info(f"writing temp file {self.temp_filename}")
             _temp.writelines(lines)
             _temp.flush()
 
+        self.log.info(f"creating {len(self.db_functions)} DB functions")
         for func in self.db_functions:
             self.conn.create_function(
                 name=func.name,
@@ -95,16 +99,26 @@ class ImportSource:
             )
 
     def import_csv(self):
+        self.log.info(f"importing csv from {self.filename}")
         try:
             table = self.conn.read_csv(
                 self.temp_filename,
                 header=True,
-                na_values=["NULL", "", "No description"],
+                na_values=["NULL", "", "No description", "Free"],
                 thousands=",",
                 columns=self.columns,
             )
             table.to_table("transactions")
+            self.log.info(f"cleaning up {self.temp_filename}")
             os.unlink(self.temp_filename)
         except InvalidInputException as _e:
+            self.log.error(f"DuckDB exception; temp file {self.temp_filename} remains for debugging")
             print(self.temp_filename)
             raise _e
+
+class WFLogger(Logger):
+    def init(self):
+        h = StreamHandler()
+        f = Formatter("{levelname:s} - {filename:s}:{lineno:d} ({funcName:s}) - {message:s}", style="{")
+        h.setFormatter(f)
+        self.addHandler(h)

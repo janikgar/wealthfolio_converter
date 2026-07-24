@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
 from duckdb import DuckDBPyConnection, DuckDBPyRelation
-from internal import ImportSource, PreProcessPattern, DuckDbFunction
+from internal import ImportSource, PreProcessPattern, DuckDbFunction, WFLogger
 from typing import Dict
-from decimal import Decimal
 import re
 
 TR_FUNDS: Dict[str, str] = {
@@ -11,6 +10,20 @@ TR_FUNDS: Dict[str, str] = {
     "VANGUARD INST INDEX   PLUS": "VIIIX",
     "AMERICAN FUNDS EUPAC R6": "RERGX",
 }
+
+
+TR_QUERY: str = """
+    FROM transactions SELECT
+    Date AS "date",
+    tr_map_activity_types("Activity Type") AS "activityType",
+    tr_map_funds("Investment") AS "symbol",
+    "Source" AS "comment",
+    'EQUITY' as "instrumentType",
+    'USD' AS "currency",
+    "Shares" AS "quantity",
+    "Price" AS "unitPrice",
+    CAST("Amount" AS DECIMAL) AS "amount",
+"""
 
 
 def tr_map_activity_types(action: str) -> str:
@@ -68,6 +81,7 @@ TR_COLUMNS: Dict[str, str] = {
 class TRowe(ImportSource):
     filename: str
     conn: DuckDBPyConnection
+    log: WFLogger
     columns: Dict[str, str] = field(default_factory=lambda: TR_COLUMNS)
     source_name: str = "trowe"
     start_row_regex: str = r"Activity Type"
@@ -79,15 +93,5 @@ class TRowe(ImportSource):
     )
 
     def reshape(self) -> DuckDBPyRelation:
-        self.conn.sql("""FROM transactions SELECT
-                      Date AS "date",
-                      tr_map_activity_types("Activity Type") AS "activityType",
-                      tr_map_funds("Investment") AS "symbol",
-                      "Source" AS "comment",
-                      'EQUITY' as "instrumentType",
-                      'USD' AS "currency",
-                      "Shares" AS "quantity",
-                      "Price" AS "unitPrice",
-                      CAST("Amount" AS DECIMAL) AS "amount",
-                      """).to_table(self.source_name)
+        self.conn.sql(TR_QUERY).to_table(self.source_name)
         return self.conn.table(self.source_name)
