@@ -38,7 +38,7 @@ VG_QUERY : str = """
     Symbol as "symbol",
     'EQUITY' as "instrumentType",
     COALESCE(IF(Shares == 0, 1, Shares), 1) as "quantity",
-    vg_map_activity_types("Transaction Type") AS "activityType",
+    vg_map_activity_types("Transaction Type", Shares) AS "activityType",
     vg_coalesce_missing_unit_price("Shares", "Share Price", "Net Amount") AS "unitPrice",
     'USD' AS "currency",
     "Commissions and Fees" as "fee",
@@ -65,7 +65,7 @@ VG_XLSX_QUERY : str = """
     Symbol as "symbol",
     'EQUITY' as "instrumentType",
     COALESCE(IF(Quantity == 0, 1, Quantity), 1) as "quantity",
-    vg_map_activity_types("Transaction Type") AS "activityType",
+    vg_map_activity_types("Transaction Type", Quantity) AS "activityType",
     vg_coalesce_missing_unit_price("Quantity", "Price", "Amount") AS "unitPrice",
     'USD' AS "currency",
     "Commission & fees**" as "fee",
@@ -89,17 +89,23 @@ def vg_coalesce_missing_unit_price(
     return unit_price
 
 
-def vg_map_activity_types(action: str) -> str:
+def vg_map_activity_types(action: str, quantity: Decimal) -> str:
     if re.match(r"Buy|Reinvestment|Capital gain.*", action):
         action = "BUY"
 
     if re.match(r"Sell", action):
         action = "SELL"
 
-    if re.match(r"(Funds Received|(Transfer|Rollover) \(incoming\))", action, re.IGNORECASE):
+    if re.match(r"Exchange", action, re.IGNORECASE):
+        if quantity > 0:
+            action = "BUY"
+        else:
+            action = "SELL"
+
+    if re.match(r"(Conversion \(incoming\)|Funds Received|(Transfer|Rollover) \(incoming\))", action, re.IGNORECASE):
         action = "TRANSFER IN"
 
-    if re.match(r"(Transfer|Rollover)(| To)(| \(Outgoing\))", action, re.IGNORECASE):
+    if re.match(r"(Transfer To|Rollover To|Transfer \(Outgoing\)|Conversion \(Outgoing\))", action, re.IGNORECASE):
         action = "TRANSFER OUT"
 
     if re.match(r"adjustment", action):
@@ -114,6 +120,9 @@ def vg_map_activity_types(action: str) -> str:
     if re.match(r"Distribution", action):
         action = "WITHDRAWAL"
 
+    if re.match(r"Stock split", action):
+        action = "SPLIT"
+
     possible_match = WF_TYPES.intersection([action.upper()])
 
     if len(possible_match) > 0:
@@ -124,7 +133,7 @@ def vg_map_activity_types(action: str) -> str:
 
 DEFAULT_PREPROCESS = [
     # drop all sweep lines
-    PreProcessPattern(r".*(Sweep|Conversion|Recharacterization).*", ""),
+    PreProcessPattern(r".*(Sweep|Recharacterization).*", ""),
     # remove literal dollar signs
     PreProcessPattern(r"\$", ""),
     # remove lines with all commas
@@ -141,7 +150,11 @@ DEFAULT_PREPROCESS = [
 
 DEFAULT_FUNCTIONS = [
     DuckDbFunction(
-        "vg_map_activity_types", vg_map_activity_types, ["VARCHAR"], "VARCHAR"
+        "vg_map_activity_types",
+        vg_map_activity_types,
+        ["VARCHAR", "DECIMAL"],
+        "VARCHAR",
+        null_handling=SPECIAL,
     ),
     DuckDbFunction(
         "vg_coalesce_missing_unit_price",
