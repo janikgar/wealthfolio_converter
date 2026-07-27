@@ -9,6 +9,10 @@ TR_FUNDS: Dict[str, str] = {
     "DODGE & COX INCOME I": "DODIX",
     "VANGUARD INST INDEX   PLUS": "VIIIX",
     "AMERICAN FUNDS EUPAC R6": "RERGX",
+    "TRP RETIREMENT 2055 TR-F": "TRRNX",
+    "TRP US MID-CAP VALUE EQ TR-D": "TRMCX",
+    "TRP GROWTH STOCK TR-A": "PRGFX",
+    "TRP US SMALL-CAP VALUE EQ TR-D": "PRSVX",
 }
 
 
@@ -27,12 +31,19 @@ TR_QUERY: str = """
 
 
 def tr_map_activity_types(action: str) -> str:
-    if action == "Contribution" or action == "Misc. Receipt":
+    if re.match(r"Contribution|Misc\. Receipt", action):
+        return "TRANSFER IN"
+
+    if re.match(r"Exchange In|In Plan Roth Rollover In", action):
         return "BUY"
 
-    action = action.upper()
+    if re.match(r"Exchange Out|In Plan Roth Rollover Out", action):
+        return "SELL"
 
-    action = re.sub("EXCHANGE", "TRANSFER", action)
+    if re.match(r"Withdrawal", action):
+        return "TRANSFER OUT"
+    
+    action = action.upper()
 
     return action
 
