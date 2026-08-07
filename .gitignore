@@ -1,5 +1,9 @@
 *.csv
 *.xlsx
-inputs/
+inputs/fidelity/*
+inputs/trowe/*
+inputs/vanguard/*
+inputs/vanguard-xlsx/*
+!**/.gitkeep
 outputs/
 __pycache__/
