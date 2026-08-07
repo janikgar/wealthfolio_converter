@@ -112,13 +112,19 @@ class ImportSource:
             self.log.info(f"cleaning up {self.temp_filename}")
             os.unlink(self.temp_filename)
         except InvalidInputException as _e:
-            self.log.error(f"DuckDB exception; temp file {self.temp_filename} remains for debugging")
+            self.log.error(
+                f"DuckDB exception; temp file {self.temp_filename} remains for debugging"
+            )
             print(self.temp_filename)
             raise _e
+
 
 class WFLogger(Logger):
     def init(self):
         h = StreamHandler()
-        f = Formatter("{levelname:s} - {filename:s}:{lineno:d} ({funcName:s}) - {message:s}", style="{")
+        f = Formatter(
+            "{levelname:s} - {filename:s}:{lineno:d} ({funcName:s}) - {message:s}",
+            style="{",
+        )
         h.setFormatter(f)
         self.addHandler(h)

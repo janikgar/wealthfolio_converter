@@ -42,7 +42,7 @@ def tr_map_activity_types(action: str) -> str:
 
     if re.match(r"Withdrawal", action):
         return "TRANSFER OUT"
-    
+
     action = action.upper()
 
     return action

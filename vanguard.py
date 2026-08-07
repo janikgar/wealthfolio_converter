@@ -14,7 +14,7 @@ import os.path
 from dataclasses import dataclass, field
 from typing import Dict
 
-VG_COLUMNS : Dict[str, str] = {
+VG_COLUMNS: Dict[str, str] = {
     "Account Number": "bigint",
     "Trade Date": "date",
     "Settlement Date": "date",
@@ -31,7 +31,7 @@ VG_COLUMNS : Dict[str, str] = {
     "Account Type": "varchar",
 }
 
-VG_QUERY : str = """
+VG_QUERY: str = """
     FROM transactions SELECT
     "Account Number" AS "account",
     "Trade Date" AS "date",
@@ -59,7 +59,7 @@ VG_XLSX_COLUMNS: Dict[str, str] = {
     "Amount": "decimal",
 }
 
-VG_XLSX_QUERY : str = """
+VG_XLSX_QUERY: str = """
     FROM transactions SELECT
     "Trade Date" as "date",
     Symbol as "symbol",
@@ -102,10 +102,18 @@ def vg_map_activity_types(action: str, quantity: Decimal) -> str:
         else:
             action = "SELL"
 
-    if re.match(r"(Conversion \(incoming\)|Funds Received|(Transfer|Rollover) \(incoming\))", action, re.IGNORECASE):
+    if re.match(
+        r"(Conversion \(incoming\)|Funds Received|(Transfer|Rollover) \(incoming\))",
+        action,
+        re.IGNORECASE,
+    ):
         action = "TRANSFER IN"
 
-    if re.match(r"(Transfer To|Rollover To|Transfer \(Outgoing\)|Conversion \(Outgoing\))", action, re.IGNORECASE):
+    if re.match(
+        r"(Transfer To|Rollover To|Transfer \(Outgoing\)|Conversion \(Outgoing\))",
+        action,
+        re.IGNORECASE,
+    ):
         action = "TRANSFER OUT"
 
     if re.match(r"adjustment", action):
@@ -133,7 +141,7 @@ def vg_map_activity_types(action: str, quantity: Decimal) -> str:
 
 DEFAULT_PREPROCESS = [
     # drop all sweep lines
-    PreProcessPattern(r".*(Sweep|Recharacterization).*", ""),
+    PreProcessPattern(r".*(Sweep).*", ""),
     # remove literal dollar signs
     PreProcessPattern(r"\$", ""),
     # remove lines with all commas
@@ -188,7 +196,8 @@ class Vanguard(ImportSource):
         self.conn.load_extension("excel")
 
         temp_table = self.conn.execute(
-            "SELECT * FROM read_xlsx(?, range = 'A4:J')", [self.filename]).fetchall()
+            "SELECT * FROM read_xlsx(?, range = 'A4:J')", [self.filename]
+        ).fetchall()
 
         self.log.info(f"raw XLSX has {len(temp_table)} rows")
 
@@ -197,8 +206,8 @@ class Vanguard(ImportSource):
         self.log.info(f"filtered XLSX has {len(filtered_table)} rows")
 
         csv_filebase, _ = os.path.splitext(os.path.basename(self.filename))
-        csv_filename = f'{csv_filebase}.csv'
-        with open(csv_filename, 'w') as _csv:
+        csv_filename = f"{csv_filebase}.csv"
+        with open(csv_filename, "w") as _csv:
             csv_writer = csv.writer(_csv)
             csv_writer.writerow(VG_XLSX_COLUMNS.keys())
             csv_writer.writerows(filtered_table)

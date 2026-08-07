@@ -14,23 +14,30 @@ FD_FUNDS: Dict[str, str] = {
     "VANG TARGET RET 2055": "VFFVX",
     "FID 500 INDEX": "FXAIX",
     "DODGE & COX INCOME X": "DOXIX",
+    "VANGUARD TARGET 2055": "VFFVX",
+    "VANG VAL INDEX INST": "VIVIX",
+    "SP 500 INDEX PL CL C": "SPICX",
+    "SP TTL INTL IDX CL C": "SPARTAN",
+    "JPM LG CAP GROWTH R6": "JLGMX",
+    "FID TOTAL INTL IDX": "FTIHX",
+    "No Description": "",
 }
 
 
-FD_QUERY : str = """
+FD_QUERY: str = """
     FROM transactions SELECT
-    concat_ws(' ', "Account Number", "Account") AS "account",
-    "Run Date" AS "date",
-    COALESCE(Symbol, fd_map_funds(Description), '') as "symbol",
-    'EQUITY' as "instrumentType",
-    COALESCE(IF(Quantity == 0, 1, Quantity), 1) as "quantity",
-    IF(regexp_matches("Action", '^(Exchanges|Realized)'), fd_map_exchange_activity("Amount"), fd_map_activity_types("Action")) AS "activityType",
-    fd_coalesce_missing_unit_price("Quantity", "Price", "Amount") AS "unitPrice",
-    'USD' AS "currency",
-    "Commission" + "Fees" as "fee",
-    "Amount" AS "amount",
-    IF("Description" == 'No Description', "Action", "Description") AS "comment",
-    fd_add_subtype("Action") AS "subtype",
+    concat_ws(' ', "Account Number", Account) AS account,
+    "Run Date" AS date,
+    COALESCE(Symbol, fd_map_funds(Description), '') AS symbol,
+    'EQUITY' as instrumentType,
+    COALESCE(IF(Quantity == 0, 1, Quantity), 1) AS quantity,
+    fd_map_exchange_activity(Amount, COALESCE(Symbol, fd_map_funds(Description), ''), Action) AS activityType,
+    fd_coalesce_missing_unit_price(Quantity, Price, Amount) AS unitPrice,
+    'USD' AS currency,
+    Commission + Fees AS fee,
+    Amount AS amount,
+    IF(Description == 'No Description', Action, Description) AS comment,
+    fd_add_subtype(Action) AS subtype,
 """
 
 
@@ -41,23 +48,33 @@ def fd_map_funds(name: str) -> str:
 
 
 def fd_map_activity_types(action: str) -> str:
-    if re.match(r"(YOU BOUGHT|REINVESTMENT).*", action):
+    if re.match(r"FOREIGN TAX", action):
+        action = "TAX"
+
+    if re.match(r"ADJUST FEE", action):
+        action = "FEE"
+
+    if re.match(r"(YOU BOUGHT|REINVESTMENT|EXCHANGED TO).*", action):
         action = "BUY"
 
     if re.match(r"YOU SOLD.*", action):
         action = "SELL"
 
-    if re.match(r"DIVIDEND RECEIVED.*", action):
+    if re.match(r"DIVIDEND RECEIVED", action):
         action = "DIVIDEND"
 
-    if re.match(r"(DIRECT DEPOSIT|Contribution).*", action):
+    if re.match(r"(DIRECT DEPOSIT|INTEREST EARNED FDIC INSURED DEPOSIT)", action):
         action = "DEPOSIT"
 
-    if re.match(r"(.*ROLLOVER FROM|TRANSFERRED FROM).*", action):
+    if re.match(
+        r"(ROLLOVER FROM|TRANSFERRED FROM|Contribution|ELECTRONIC FUNDS TRANSFER RECEIVED|REVENUE CREDIT|ROLLOVER CASH DIRECT ROLLOVER FROM)",
+        action,
+        re.IGNORECASE,
+    ):
         action = "TRANSFER IN"
 
     if re.match(
-        r"(WITHDRAWALS|DIRECT DEBIT|DEBIT CARD PURCHASE|Electronic Funds Transfer Paid)",
+        r"(WITHDRAWALS|DIRECT DEBIT|DEBIT CARD PURCHASE|Electronic Funds Transfer Paid|CASH ADVANCE)",
         action,
     ):
         action = "WITHDRAWAL"
@@ -78,12 +95,24 @@ def fd_add_subtype(action: str) -> str:
         return "DRIP"
     return ""
 
-
-def fd_map_exchange_activity(amount: Decimal) -> str:
-    if amount < 0:
-        return "BUY"
+def fd_map_exchange_activity(amount: Decimal, symbol: str, action: str) -> str:
+    if re.match("Exchanges", action):
+        if symbol == "BROKERAGELINK":
+            if amount < 0:
+                return "WITHDRAWAL"
+            else:
+                return "DEPOSIT"
+        if amount < 0:
+            return "BUY"
+        else:
+            return "SELL"
+    elif re.match("Realized", action):
+        if amount < 0:
+            return "WITHDRAWAL"
+        else:
+            return "DEPOSIT"
     else:
-        return "SELL"
+        return fd_map_activity_types(action)
 
 
 def fd_coalesce_missing_unit_price(
@@ -107,7 +136,11 @@ DEFAULT_FUNCTIONS = [
     ),
     DuckDbFunction("fd_add_subtype", fd_add_subtype, ["VARCHAR"], "VARCHAR"),
     DuckDbFunction(
-        "fd_map_exchange_activity", fd_map_exchange_activity, ["DECIMAL"], "VARCHAR"
+        "fd_map_exchange_activity",
+        fd_map_exchange_activity,
+        ["DECIMAL", "VARCHAR", "VARCHAR"],
+        "VARCHAR",
+        null_handling=SPECIAL,
     ),
     DuckDbFunction(
         "fd_coalesce_missing_unit_price",

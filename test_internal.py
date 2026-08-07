@@ -37,8 +37,4 @@ class TestInternal:
 
     def test_import_source(self):
         conn = duckdb.connect(":memory:")
-        source = ImportSource(
-            filename="test.csv",
-            conn=conn,
-            columns={"foo":"bar"}
-        )
+        source = ImportSource(filename="test.csv", conn=conn, columns={"foo": "bar"})
