@@ -1,5 +1,9 @@
 wealthfolio_converter
 ---
+![Tests](badges/tests.svg)
+![Coverage](badges/coverage.svg)
+![Last Run](badges/last-run.svg)
+![Skipped](badges/skipped.svg)
 
 This Python project converts CSV flat files (and some XLSX versions) into a standardized, vendor-neutral format that can be imported into Wealthfolio.
 
