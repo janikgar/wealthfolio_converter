@@ -37,3 +37,19 @@ addopts = [
     "--cov-report=html"
 ]
 verbosity_subtests = "1"
+
+[tool.pylint]
+main.ignore-patterns = [ "^\\.#" , "test_.*\\.py" ]
+"messages control".disable = [
+  "bad-inline-option",
+  "deprecated-pragma",
+  "file-ignored",
+  "locally-disabled",
+  "raw-checker-failed",
+  "suppressed-message",
+  "use-implicit-booleaness-not-comparison-to-string",
+  "use-implicit-booleaness-not-comparison-to-zero",
+  "use-symbolic-message-instead",
+  "useless-suppression",
+  "logging-fstring-interpolation",
+]

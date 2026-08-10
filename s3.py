@@ -10,7 +10,11 @@ from botocore.session import Session
 from botocore.exceptions import ClientError
 from botocore.response import StreamingBody
 from dotenv import load_dotenv
-from internal import WFLogger
+from .internal import WFLogger
+
+
+class S3Exception(Exception):
+    """Catchall S3 exception"""
 
 
 @dataclass
@@ -41,7 +45,7 @@ class S3Bucket:
         try:
             client.head_bucket(Bucket=self.bucket)
         except ClientError as _e:
-            raise Exception(
+            raise S3Exception(
                 f'could not connect to bucket {self.bucket}: {_e}') from _e
 
         self.log.info(f'connected to bucket {self.bucket}')
@@ -59,7 +63,7 @@ class S3Bucket:
         try:
             self.client.head_object(Bucket=self.bucket, Key=path)
         except ClientError as _e:
-            raise Exception(
+            raise S3Exception(
                 f'could not connect to object s3://{self.bucket}/{path}: {_e}') from _e
         self.input_path = path
 
@@ -83,5 +87,5 @@ class S3Bucket:
                 Bucket=self.bucket, Key=remote_path, Body=local_path)
             self.log.info(f'uploaded {local_path} to {remote_path}')
         except ClientError as _e:
-            raise Exception(
+            raise S3Exception(
                 f'could not upload {local_path} to {remote_path}: {_e}')from _e

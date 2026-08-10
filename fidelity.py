@@ -7,7 +7,7 @@ from typing import Dict
 from decimal import Decimal
 from duckdb import DuckDBPyRelation
 from duckdb.func import SPECIAL
-from internal import ImportSource, PreProcessPattern, DuckDbFunction, WF_TYPES
+from .internal import ImportSource, PreProcessPattern, DuckDbFunction, WF_TYPES
 
 FD_FUNDS: Dict[str, str] = {
     "AF EUPAC FUND R6": "RERGX",
@@ -209,5 +209,5 @@ class Fidelity(ImportSource):
 
     def reshape(self) -> DuckDBPyRelation:
         """Reshape function for Fidelity"""
-        self.conn.sql(FD_QUERY).to_table(self.source_name)
-        return self.conn.table(self.source_name)
+        self.common.conn.sql(FD_QUERY).to_table(self.source_name)
+        return self.common.conn.table(self.source_name)

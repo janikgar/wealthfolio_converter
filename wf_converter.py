@@ -10,12 +10,12 @@ from argparse import ArgumentParser, Namespace
 from tempfile import NamedTemporaryFile
 
 import duckdb
-from s3 import S3Bucket
 
-from internal import ImportSource, WFLogger
-from vanguard import Vanguard
-from fidelity import Fidelity
-from trowe import TRowe
+from .internal import ImportSource, WFLogger, CommonConfig
+from .s3 import S3Bucket
+from .vanguard import Vanguard
+from .fidelity import Fidelity
+from .trowe import TRowe
 
 
 def parse_args() -> Namespace:
@@ -67,25 +67,26 @@ if __name__ == "__main__":
     conn = duckdb.connect()
 
     import_object: ImportSource
-    import_args = {
-        "filename": args.input,
-        "conn": conn,
-        "log": log,
-    }
+
+    common_config = CommonConfig(
+        filename=args.input,
+        conn=conn,
+        log=log,
+    )
 
     log.info(f"using format {args.format}")
     if args.format == "vanguard-xlsx":
-        import_object = Vanguard(**import_args)
+        import_object = Vanguard(common_config)
         import_object.xlsx_to_csv()
 
     elif args.format == "vanguard":
-        import_object = Vanguard(**import_args)
+        import_object = Vanguard(common_config)
 
     elif args.format == "fidelity":
-        import_object = Fidelity(**import_args)
+        import_object = Fidelity(common_config)
 
     elif args.format == "trowe":
-        import_object = TRowe(**import_args)
+        import_object = TRowe(common_config)
 
     else:
         log.error(f"could not parse format {args.format}")

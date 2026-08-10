@@ -8,15 +8,15 @@ import os.path
 from dataclasses import dataclass, field
 from typing import Dict
 
-from duckdb import DuckDBPyConnection, DuckDBPyRelation
+from duckdb import DuckDBPyRelation
 from duckdb.func import SPECIAL
 
-from internal import (
+from .internal import (
     ImportSource,
     PreProcessPattern,
     DuckDbFunction,
-    WFLogger,
     WF_TYPES,
+    CommonConfig,
 )
 
 VG_COLUMNS: Dict[str, str] = {
@@ -128,9 +128,6 @@ def vg_map_activity_types(action: str, quantity: Decimal) -> str:
     ):
         action = "TRANSFER OUT"
 
-    if re.match(r"adjustment", action):
-        action = "ADJUSTMENT"
-
     if re.match(r"Withholding", action):
         action = "TAX"
 
@@ -188,55 +185,52 @@ DEFAULT_FUNCTIONS = [
 @dataclass
 class Vanguard(ImportSource):
     """Vanguard transaction table class"""
-    filename: str
-    conn: DuckDBPyConnection
-    log: WFLogger
-    query: str = VG_QUERY
-    source_name: str = "vanguard"
-    columns: Dict[str, str] = field(default_factory=lambda: VG_COLUMNS)
+    common: CommonConfig
     start_row_regex: str = r"Trade"
+    source_name: str = "vanguard"
+    query: str = VG_QUERY
+    columns: Dict[str, str] = field(default_factory=lambda: VG_COLUMNS)
     pre_process_funcs: list[PreProcessPattern] = field(
         default_factory=lambda: DEFAULT_PREPROCESS
     )
     db_functions: list[DuckDbFunction] = field(
         default_factory=lambda: DEFAULT_FUNCTIONS
     )
-    stop_before_row_regex: str = ""
 
     def xlsx_to_csv(self):
         """Utility class for converting Excel XLSX to CSV"""
-        self.log.info("converting Vanguard xlsx to csv")
-        self.conn.install_extension("excel")
-        self.conn.load_extension("excel")
+        self.common.log.info("converting Vanguard xlsx to csv")
+        self.common.conn.install_extension("excel")
+        self.common.conn.load_extension("excel")
 
-        temp_table = self.conn.execute(
-            "SELECT * FROM read_xlsx(?, range = 'A4:J')", [self.filename]
+        temp_table = self.common.conn.execute(
+            "SELECT * FROM read_xlsx(?, range = 'A4:J')", [self.common.filename]
         ).fetchall()
 
-        self.log.info(f"raw XLSX has {len(temp_table)} rows")
+        self.common.log.info(f"raw XLSX has {len(temp_table)} rows")
 
         filtered_table = [row for row in temp_table if None not in row]
 
-        self.log.info(f"filtered XLSX has {len(filtered_table)} rows")
+        self.common.log.info(f"filtered XLSX has {len(filtered_table)} rows")
 
-        csv_filebase, _ = os.path.splitext(os.path.basename(self.filename))
+        csv_filebase, _ = os.path.splitext(os.path.basename(self.common.filename))
         csv_filename = f"{csv_filebase}.csv"
         with open(csv_filename, "w", encoding="utf-8") as _csv:
             csv_writer = csv.writer(_csv)
             csv_writer.writerow(VG_XLSX_COLUMNS.keys())
             csv_writer.writerows(filtered_table)
 
-        self.log.info(f"converted XLSX written to {csv_filename}")
+        self.common.log.info(f"converted XLSX written to {csv_filename}")
 
         # mutate object with newly-created file, separate columns,
         # and separate regex to stop ingesting data
-        self.filename = csv_filename
+        self.common.filename = csv_filename
         self.columns = VG_XLSX_COLUMNS
-        self.stop_before_row_regex = "DISCLOSURES"
+        self.common.stop_before_row_regex = "DISCLOSURES"
         self.query = VG_XLSX_QUERY
 
     def reshape(self) -> DuckDBPyRelation:
         """Reshape function for Vanguard"""
-        self.log.info(f"reshaping {self.source_name}-formatted file to table")
-        self.conn.sql(self.query).to_table(self.source_name)
-        return self.conn.table(self.source_name)
+        self.common.log.info(f"reshaping {self.common.source_name}-formatted file to table")
+        self.common.conn.sql(self.query).to_table(self.common.source_name)
+        return self.common.conn.table(self.common.source_name)

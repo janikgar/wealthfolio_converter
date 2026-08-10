@@ -4,8 +4,8 @@ Defines constants, queries, DuckDB functions, and DTOs for T. Rowe Price
 from dataclasses import dataclass, field
 from typing import Dict
 import re
-from duckdb import DuckDBPyConnection, DuckDBPyRelation
-from internal import ImportSource, PreProcessPattern, DuckDbFunction, WFLogger
+from duckdb import DuckDBPyRelation
+from .internal import ImportSource, PreProcessPattern, DuckDbFunction
 
 TR_FUNDS: Dict[str, str] = {
     "DODGE & COX INCOME X": "DODIX",
@@ -98,9 +98,6 @@ TR_COLUMNS: Dict[str, str] = {
 @dataclass
 class TRowe(ImportSource):
     """T. Rowe Price transaction table class"""
-    filename: str
-    conn: DuckDBPyConnection
-    log: WFLogger
     columns: Dict[str, str] = field(default_factory=lambda: TR_COLUMNS)
     source_name: str = "trowe"
     start_row_regex: str = r"Activity Type"
@@ -112,5 +109,6 @@ class TRowe(ImportSource):
     )
 
     def reshape(self) -> DuckDBPyRelation:
-        self.conn.sql(TR_QUERY).to_table(self.source_name)
-        return self.conn.table(self.source_name)
+        """Reshape function for T. Rowe Price"""
+        self.common.conn.sql(TR_QUERY).to_table(self.source_name)
+        return self.common.conn.table(self.source_name)

@@ -59,39 +59,47 @@ class DuckDbFunction:
 
 
 @dataclass
-class ImportSource: #pylint: disable=R0902
-    """
-    Vendor-independent base class for all data imports.
-    After data class initialization, a temp file is always created for
-    intermediate processing.
-    """
+class CommonConfig:
+    """Common configuration for all ImportSources"""
     filename: str
     conn: DuckDBPyConnection
     log: WFLogger
     start_row_regex: str = ""
     stop_before_row_regex: str = ""
     source_name: str = ""
+
+
+@dataclass
+class ImportSource:  # pylint: disable=R0902
+    """
+    Vendor-independent base class for all data imports.
+    After data class initialization, a temp file is always created for
+    intermediate processing.
+    """
+    common: CommonConfig
     pre_process_funcs: List[PreProcessPattern] = field(default_factory=list)
     db_functions: list[DuckDbFunction] = field(default_factory=list)
     columns: Dict[str, str] = field(default_factory=Dict[str, str])
 
     def __post_init__(self):
         _, self.temp_filename = mkstemp(
-            prefix=f"{self.source_name}-", text=True
+            prefix=f"{self.common.source_name}-", text=True
         )
-        self.log.info(f"created temp file {self.temp_filename}")
+        self.common.log.info(f"created temp file {self.temp_filename}")
 
     def pre_process(self):
         """executes all stored pre-processing substitutions"""
-        self.log.info("beginning pre-processing")
-        with open(self.filename, encoding="utf-8") as _c:
+        self.common.log.info("beginning pre-processing")
+        with open(self.common.filename, encoding="utf-8") as _c:
             lines: list[str] = []
             for line in _c.readlines():
-                if self.start_row_regex != "" and re.search(self.start_row_regex, line) is not None:
+                if self.common.start_row_regex != "" and \
+                        re.search(self.common.start_row_regex, line) is not None:
                     lines.clear()
                 if (
-                    re.search(self.stop_before_row_regex, line) is not None
-                    and self.stop_before_row_regex != ""
+                    re.search(self.common.stop_before_row_regex,
+                              line) is not None
+                    and self.common.stop_before_row_regex != ""
                 ):
                     break
                 for func in self.pre_process_funcs:
@@ -99,13 +107,13 @@ class ImportSource: #pylint: disable=R0902
                 if line != "":
                     lines.append(line)
         with open(self.temp_filename, "w", encoding="utf-8") as _temp:
-            self.log.info(f"writing temp file {self.temp_filename}")
+            self.common.log.info(f"writing temp file {self.temp_filename}")
             _temp.writelines(lines)
             _temp.flush()
 
-        self.log.info(f"creating {len(self.db_functions)} DB functions")
+        self.common.log.info(f"creating {len(self.db_functions)} DB functions")
         for func in self.db_functions:
-            self.conn.create_function(
+            self.common.conn.create_function(
                 name=func.name,
                 function=func.function,
                 parameters=func.params,
@@ -116,9 +124,9 @@ class ImportSource: #pylint: disable=R0902
 
     def import_csv(self):
         """imports given file into internal DuckDB table"""
-        self.log.info(f"importing csv from {self.filename}")
+        self.common.log.info(f"importing csv from {self.common.filename}")
         try:
-            table = self.conn.read_csv(
+            table = self.common.conn.read_csv(
                 self.temp_filename,
                 header=True,
                 na_values=["NULL", "", "No description", "Free"],
@@ -126,10 +134,10 @@ class ImportSource: #pylint: disable=R0902
                 columns=self.columns,
             )
             table.to_table("transactions")
-            self.log.info(f"cleaning up {self.temp_filename}")
+            self.common.log.info(f"cleaning up {self.temp_filename}")
             os.unlink(self.temp_filename)
         except DatabaseError as _e:
-            self.log.error(
+            self.common.log.error(
                 f"DuckDB exception; temp file {self.temp_filename} remains for debugging"
             )
             raise _e
@@ -137,6 +145,7 @@ class ImportSource: #pylint: disable=R0902
 
 class WFLogger(Logger):
     """Base logging class to be passed into other classes."""
+
     def init(self):
         """Instantiate class-specific logging"""
         h = StreamHandler()
