@@ -1,4 +1,5 @@
 .env
+lint.txt
 *.csv
 *.xlsx
 inputs/fidelity/*
