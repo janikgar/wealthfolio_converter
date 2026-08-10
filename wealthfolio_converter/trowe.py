@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict
 import re
 from duckdb import DuckDBPyRelation
-from internal import ImportSource, PreProcessPattern, DuckDbFunction
+from .internal import ImportSource, PreProcessPattern, DuckDbFunction
 
 TR_FUNDS: Dict[str, str] = {
     "DODGE & COX INCOME X": "DODIX",

@@ -9,7 +9,10 @@ This Python project converts CSV flat files (and some XLSX versions) into a stan
 3. Enter the virtualenv with `source .venv/bin/activate`
 
 ### Usage
-
+```
+usage: wf_converter.py [-h] --format {fidelity,vanguard,vanguard-xlsx,trowe} --output OUTPUT input
+wf_converter.py: error: the following arguments are required: --format/-f, --output/-o, input
+```
 
 ## Vendor adapters
 - Fidelity

@@ -11,11 +11,11 @@ from tempfile import NamedTemporaryFile
 
 import duckdb
 
-from internal import ImportSource, WFLogger, CommonConfig
-from s3 import S3Bucket
-from vanguard import Vanguard
-from fidelity import Fidelity
-from trowe import TRowe
+from wealthfolio_converter.internal import ImportSource, WFLogger, CommonConfig
+from wealthfolio_converter.s3 import S3Bucket
+from wealthfolio_converter.vanguard import Vanguard
+from wealthfolio_converter.fidelity import Fidelity
+from wealthfolio_converter.trowe import TRowe
 
 
 def parse_args() -> Namespace:

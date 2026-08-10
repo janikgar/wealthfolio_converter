@@ -7,7 +7,7 @@ from typing import Dict
 from decimal import Decimal
 from duckdb import DuckDBPyRelation
 from duckdb.func import SPECIAL
-from internal import ImportSource, PreProcessPattern, DuckDbFunction, WF_TYPES
+from .internal import ImportSource, PreProcessPattern, DuckDbFunction, WF_TYPES
 
 FD_FUNDS: Dict[str, str] = {
     "AF EUPAC FUND R6": "RERGX",

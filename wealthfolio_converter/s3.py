@@ -10,7 +10,7 @@ from botocore.session import Session
 from botocore.exceptions import ClientError
 from botocore.response import StreamingBody
 from dotenv import load_dotenv
-from internal import WFLogger
+from .internal import WFLogger
 
 
 class S3Exception(Exception):

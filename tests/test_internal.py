@@ -1,6 +1,6 @@
 import pytest
 import duckdb
-from .internal import PreProcessPattern, WFLogger, ImportSource, DuckDbFunction, CommonConfig
+from wealthfolio_converter.internal import PreProcessPattern, WFLogger, ImportSource, DuckDbFunction, CommonConfig
 
 
 class TestInternal:

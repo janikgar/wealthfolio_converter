@@ -2,8 +2,8 @@ from decimal import Decimal
 from datetime import date
 import pytest
 import duckdb
-from .internal import CommonConfig, WFLogger
-from .fidelity import (
+from wealthfolio_converter.internal import CommonConfig, WFLogger
+from wealthfolio_converter.fidelity import (
     FD_FUNDS,
     Fidelity,
     fd_add_subtype,
