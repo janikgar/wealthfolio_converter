@@ -1,6 +1,6 @@
 import pytest
 import duckdb
-from .internal import PreProcessPattern, WFLogger, ImportSource, DuckDbFunction
+from .internal import PreProcessPattern, WFLogger, ImportSource, DuckDbFunction, CommonConfig
 
 
 class TestInternal:
@@ -35,8 +35,11 @@ class TestInternal:
         conn = duckdb.connect(":memory:")
         log = WFLogger("test", "DEBUG")
         log.init()
-        source = ImportSource(filename=str(tmp_file.resolve()), conn=conn,
-                              columns={"foo": "VARCHAR"}, log=log)
+        source = ImportSource(common=CommonConfig(
+            filename=str(tmp_file.resolve()),
+            conn=conn,
+            log=log,
+        ), columns={"foo": "VARCHAR"})
         assert source.temp_filename != ""
 
     def test_import_source_pre_process(self, tmp_path):
@@ -47,9 +50,12 @@ bin""")
         log.init()
         pre_processors = [PreProcessPattern("bin", "bar", log)]
         conn = duckdb.connect(":memory:")
-        source = ImportSource(filename=str(tmp_file.resolve()), conn=conn,
-                              columns={"foo": "VARCHAR"}, log=log,
-                              pre_process_funcs=pre_processors)
+        source = ImportSource(common=CommonConfig(
+            filename=str(tmp_file.resolve()),
+            conn=conn,
+            log=log,
+        ), columns={"foo": "VARCHAR"},
+            pre_process_funcs=pre_processors)
         source.pre_process()
         source.import_csv()
         assert conn.table("transactions").columns[0] == "foo"
@@ -65,9 +71,12 @@ bin""")
         log = WFLogger("test", "DEBUG")
         log.init()
         conn = duckdb.connect(":memory:")
-        source = ImportSource(filename=str(tmp_file.resolve()), conn=conn,
-                              columns={"foo": "VARCHAR"}, log=log,
-                              start_row_regex="foo")
+        source = ImportSource(common=CommonConfig(
+            filename=str(tmp_file.resolve()),
+            conn=conn,
+            log=log,
+            start_row_regex="foo",
+        ), columns={"foo": "VARCHAR"})
         source.pre_process()
         source.import_csv()
         assert conn.table("transactions").columns[0] == "foo"
@@ -83,9 +92,12 @@ stop before this row""")
         log = WFLogger("test", "DEBUG")
         log.init()
         conn = duckdb.connect(":memory:")
-        source = ImportSource(filename=str(tmp_file.resolve()), conn=conn,
-                              columns={"foo": "VARCHAR"}, log=log,
-                              stop_before_row_regex="stop.*")
+        source = ImportSource(common=CommonConfig(
+            filename=str(tmp_file.resolve()),
+            conn=conn,
+            log=log,
+            stop_before_row_regex="stop.*",
+        ), columns={"foo": "VARCHAR"})
         source.pre_process()
         source.import_csv()
         assert conn.table("transactions").columns[0] == "foo"
@@ -100,8 +112,11 @@ stop before this row""")
         log = WFLogger("test", "DEBUG")
         log.init()
         conn = duckdb.connect(":memory:")
-        source = ImportSource(filename=str(tmp_file.resolve()), conn=conn,
-                              columns={"baz": "UTINYINT"}, log=log)
+        source = ImportSource(common=CommonConfig(
+            filename=str(tmp_file.resolve()),
+            conn=conn,
+            log=log,
+        ), columns={"baz": "UTINYINT"})
         source.pre_process()
         with pytest.raises(check=lambda e: isinstance(e, duckdb.DatabaseError)):
             source.import_csv()
@@ -119,15 +134,19 @@ stop before this row""")
             ["VARCHAR"],
             "VARCHAR"
         )]
-        source = ImportSource(filename=str(tmp_file.resolve()), conn=conn,
-                              columns={"baz": "UTINYINT"}, log=log,
-                              db_functions=db_funcs)
+        source = ImportSource(common=CommonConfig(
+            filename=str(tmp_file.resolve()),
+            conn=conn,
+            log=log,
+        ), columns={"baz": "UTINYINT"},
+            db_functions=db_funcs)
         source.pre_process()
         source.import_csv()
-        source.conn.sql("PRAGMA functions").to_table("functions")
+        conn.sql("PRAGMA functions").to_table("functions")
         assert len(source.db_functions) == 1
-        returned_function = source.conn.sql(
+        returned_function = conn.sql(
             "SELECT * FROM functions WHERE name = 'test_udf'").fetchone()
         assert returned_function is not None
         print(returned_function)
-        assert returned_function == ('test_udf', 'SCALAR', ['VARCHAR'], None, 'VARCHAR', False)
+        assert returned_function == ('test_udf', 'SCALAR', [
+                                     'VARCHAR'], None, 'VARCHAR', False)
