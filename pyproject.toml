@@ -5,6 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "boto3>=1.43.67",
+    "dotenv>=0.9.9",
     "duckdb>=1.5.4",
     "numpy>=2.5.1",
 ]
@@ -12,6 +14,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "black>=26.5.1",
+    "pylint[spelling]>=4.0.7",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
 ]

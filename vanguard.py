@@ -1,3 +1,16 @@
+"""
+Defines constants, queries, DuckDB functions, and DTOs for Fidelity
+"""
+from decimal import Decimal
+import re
+import csv
+import os.path
+from dataclasses import dataclass, field
+from typing import Dict
+
+from duckdb import DuckDBPyConnection, DuckDBPyRelation
+from duckdb.func import SPECIAL
+
 from internal import (
     ImportSource,
     PreProcessPattern,
@@ -5,14 +18,6 @@ from internal import (
     WFLogger,
     WF_TYPES,
 )
-from duckdb import DuckDBPyConnection, DuckDBPyRelation
-from duckdb.func import SPECIAL
-from decimal import Decimal
-import re
-import csv
-import os.path
-from dataclasses import dataclass, field
-from typing import Dict
 
 VG_COLUMNS: Dict[str, str] = {
     "Account Number": "bigint",
@@ -77,6 +82,10 @@ VG_XLSX_QUERY: str = """
 def vg_coalesce_missing_unit_price(
     quantity: Decimal, unit_price: Decimal, amount: Decimal
 ) -> Decimal:
+    """
+    DuckDB function to determine sane default values for unit prices (often
+    useful for cash transactions or money market funds)
+    """
     if not quantity:
         quantity = Decimal("1")
     if not amount:
@@ -90,6 +99,9 @@ def vg_coalesce_missing_unit_price(
 
 
 def vg_map_activity_types(action: str, quantity: Decimal) -> str:
+    """
+    DuckDB function for mapping activity types to standard Wealthfolio types
+    """
     if re.match(r"Buy|Reinvestment|Capital gain.*", action):
         action = "BUY"
 
@@ -135,8 +147,7 @@ def vg_map_activity_types(action: str, quantity: Decimal) -> str:
 
     if len(possible_match) > 0:
         return possible_match.pop()
-    else:
-        return action
+    return action
 
 
 DEFAULT_PREPROCESS = [
@@ -176,6 +187,7 @@ DEFAULT_FUNCTIONS = [
 
 @dataclass
 class Vanguard(ImportSource):
+    """Vanguard transaction table class"""
     filename: str
     conn: DuckDBPyConnection
     log: WFLogger
@@ -189,8 +201,10 @@ class Vanguard(ImportSource):
     db_functions: list[DuckDbFunction] = field(
         default_factory=lambda: DEFAULT_FUNCTIONS
     )
+    stop_before_row_regex: str = ""
 
     def xlsx_to_csv(self):
+        """Utility class for converting Excel XLSX to CSV"""
         self.log.info("converting Vanguard xlsx to csv")
         self.conn.install_extension("excel")
         self.conn.load_extension("excel")
@@ -207,7 +221,7 @@ class Vanguard(ImportSource):
 
         csv_filebase, _ = os.path.splitext(os.path.basename(self.filename))
         csv_filename = f"{csv_filebase}.csv"
-        with open(csv_filename, "w") as _csv:
+        with open(csv_filename, "w", encoding="utf-8") as _csv:
             csv_writer = csv.writer(_csv)
             csv_writer.writerow(VG_XLSX_COLUMNS.keys())
             csv_writer.writerows(filtered_table)
@@ -222,6 +236,7 @@ class Vanguard(ImportSource):
         self.query = VG_XLSX_QUERY
 
     def reshape(self) -> DuckDBPyRelation:
+        """Reshape function for Vanguard"""
         self.log.info(f"reshaping {self.source_name}-formatted file to table")
         self.conn.sql(self.query).to_table(self.source_name)
         return self.conn.table(self.source_name)

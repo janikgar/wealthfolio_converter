@@ -1,10 +1,13 @@
+"""
+Defines constants, queries, DuckDB functions, and DTOs for Fidelity
+"""
+import re
 from dataclasses import dataclass, field
 from typing import Dict
-from duckdb import DuckDBPyConnection, DuckDBPyRelation
-from duckdb.func import SPECIAL
 from decimal import Decimal
-from internal import ImportSource, PreProcessPattern, DuckDbFunction, WFLogger, WF_TYPES
-import re
+from duckdb import DuckDBPyRelation
+from duckdb.func import SPECIAL
+from internal import ImportSource, PreProcessPattern, DuckDbFunction, WF_TYPES
 
 FD_FUNDS: Dict[str, str] = {
     "AF EUPAC FUND R6": "RERGX",
@@ -42,12 +45,16 @@ FD_QUERY: str = """
 
 
 def fd_map_funds(name: str) -> str:
-    if name in set(FD_FUNDS.keys()):
+    """DuckDB function for mapping fund names to ticker symbols"""
+    if name in FD_FUNDS:
         return FD_FUNDS[name]
     return name
 
 
 def fd_map_activity_types(action: str) -> str:
+    """
+    DuckDB function for mapping activity types to standard Wealthfolio types
+    """
     if re.match(r"FOREIGN TAX", action):
         action = "TAX"
 
@@ -67,14 +74,16 @@ def fd_map_activity_types(action: str) -> str:
         action = "DEPOSIT"
 
     if re.match(
-        r"(ROLLOVER FROM|TRANSFERRED FROM|Contribution|ELECTRONIC FUNDS TRANSFER RECEIVED|REVENUE CREDIT|ROLLOVER CASH DIRECT ROLLOVER FROM)",
+        r"(ROLLOVER FROM|TRANSFERRED FROM|Contribution|ELECTRONIC FUNDS TRANSFER RECEIVED|"
+        "REVENUE CREDIT|ROLLOVER CASH DIRECT ROLLOVER FROM)",
         action,
         re.IGNORECASE,
     ):
         action = "TRANSFER IN"
 
     if re.match(
-        r"(WITHDRAWALS|DIRECT DEBIT|DEBIT CARD PURCHASE|Electronic Funds Transfer Paid|CASH ADVANCE)",
+        r"(WITHDRAWALS|DIRECT DEBIT|DEBIT CARD PURCHASE|Electronic Funds Transfer Paid|" \
+        "CASH ADVANCE)",
         action,
     ):
         action = "WITHDRAWAL"
@@ -86,38 +95,45 @@ def fd_map_activity_types(action: str) -> str:
 
     if len(possible_match) > 0:
         return possible_match.pop()
-    else:
-        return action
+    return action
 
 
 def fd_add_subtype(action: str) -> str:
+    """DuckDB function for adding relevant Wealthfolio subtypese"""
     if re.match(r"REINVESTMENT", action):
         return "DRIP"
     return ""
 
+
 def fd_map_exchange_activity(amount: Decimal, symbol: str, action: str) -> str:
+    """
+    DuckDB function for special mapping types related to exchanges or
+    realized gains/losses
+    """
+    return_type = fd_map_activity_types(action)
     if re.match("Exchanges", action):
         if symbol == "BROKERAGELINK":
             if amount < 0:
-                return "WITHDRAWAL"
-            else:
-                return "DEPOSIT"
+                return_type = "WITHDRAWAL"
+            return_type = "DEPOSIT"
         if amount < 0:
-            return "BUY"
-        else:
-            return "SELL"
-    elif re.match("Realized", action):
+            return_type = "BUY"
+        return_type = "SELL"
+
+    if re.match("Realized", action):
         if amount < 0:
-            return "WITHDRAWAL"
-        else:
-            return "DEPOSIT"
-    else:
-        return fd_map_activity_types(action)
+            return_type = "WITHDRAWAL"
+        return_type = "DEPOSIT"
+    return return_type
 
 
 def fd_coalesce_missing_unit_price(
     quantity: Decimal, unit_price: Decimal, amount: Decimal
 ) -> Decimal:
+    """
+    DuckDB function to determine sane default values for unit prices (often
+    useful for cash transactions or money market funds)
+    """
     if not quantity:
         quantity = Decimal("1")
     if not amount:
@@ -181,9 +197,7 @@ FD_COLUMNS: Dict[str, str] = {
 
 @dataclass
 class Fidelity(ImportSource):
-    filename: str
-    conn: DuckDBPyConnection
-    log: WFLogger
+    """Fidelity transaction table class"""
     columns: Dict[str, str] = field(default_factory=lambda: FD_COLUMNS)
     source_name: str = "fidelity"
     start_row_regex: str = r"Run Date"
@@ -194,5 +208,6 @@ class Fidelity(ImportSource):
     )
 
     def reshape(self) -> DuckDBPyRelation:
+        """Reshape function for Fidelity"""
         self.conn.sql(FD_QUERY).to_table(self.source_name)
         return self.conn.table(self.source_name)

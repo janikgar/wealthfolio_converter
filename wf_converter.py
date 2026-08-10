@@ -1,14 +1,25 @@
 #!/usr/bin/env python3
-import duckdb
+"""
+wf_converter.py converts files from various financial data sources into a common
+format for ingestion into Wealthfolio (https://wealthfolio.app).
+"""
 import sys
+import os
+import re
+from argparse import ArgumentParser, Namespace
+from tempfile import NamedTemporaryFile
+
+import duckdb
+from s3 import S3Bucket
+
 from internal import ImportSource, WFLogger
 from vanguard import Vanguard
 from fidelity import Fidelity
-from argparse import ArgumentParser, Namespace
 from trowe import TRowe
 
 
 def parse_args() -> Namespace:
+    """parses command line arguments"""
     ap = ArgumentParser(
         prog="wf_converter.py",
         description="""Converts from financial firm-generated
@@ -40,8 +51,17 @@ def parse_args() -> Namespace:
 
 if __name__ == "__main__":
     log = WFLogger("main", "DEBUG")
-    log.init()
     args = parse_args()
+
+    s3_input_bucket: S3Bucket | None = None
+    s3_pattern = re.compile(
+        r"s3:\/\/(?P<bucket_name>.*?)\/(?P<object_path>.*)")
+    s3_input_match = s3_pattern.fullmatch(args.input)
+    if s3_input_match:
+        log.info("detected S3 input path")
+        s3_input_bucket = S3Bucket(s3_input_match.group('bucket_name'), log)
+        s3_input_bucket.download_path(s3_input_match.group('object_path'))
+        args.input = s3_input_bucket.temp_filename
 
     conn = duckdb.connect()
 
@@ -77,4 +97,20 @@ if __name__ == "__main__":
     output_table.show()
 
     log.info(f"writing final output to {args.output}")
-    output_table.to_csv(args.output)
+
+    s3_output_bucket: S3Bucket | None = None
+    s3_output_match = s3_pattern.fullmatch(args.output)
+    if s3_output_match:
+        log.info("detected S3 output path")
+        s3_output_bucket = S3Bucket(s3_output_match.group('bucket_name'), log)
+        with NamedTemporaryFile(mode="w+") as _o:
+            output_table.to_csv(_o.name)
+            s3_output_bucket.upload_path(
+                _o.name, s3_output_match.group('object_path'))
+    else:
+        output_table.to_csv(args.output)
+
+    if s3_input_bucket:
+        os.unlink(s3_input_bucket.temp_filename)
+    if s3_output_bucket:
+        os.unlink(s3_output_bucket.temp_filename)

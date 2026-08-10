@@ -1,8 +1,11 @@
+"""
+Defines constants, queries, DuckDB functions, and DTOs for T. Rowe Price
+"""
 from dataclasses import dataclass, field
-from duckdb import DuckDBPyConnection, DuckDBPyRelation
-from internal import ImportSource, PreProcessPattern, DuckDbFunction, WFLogger
 from typing import Dict
 import re
+from duckdb import DuckDBPyConnection, DuckDBPyRelation
+from internal import ImportSource, PreProcessPattern, DuckDbFunction, WFLogger
 
 TR_FUNDS: Dict[str, str] = {
     "DODGE & COX INCOME X": "DODIX",
@@ -31,6 +34,9 @@ TR_QUERY: str = """
 
 
 def tr_map_activity_types(action: str) -> str:
+    """
+    DuckDB function for mapping activity types to standard Wealthfolio types
+    """
     if re.match(r"Contribution|Misc\. Receipt", action):
         return "TRANSFER IN"
 
@@ -49,7 +55,8 @@ def tr_map_activity_types(action: str) -> str:
 
 
 def tr_map_funds(name: str) -> str:
-    if name in set(TR_FUNDS.keys()):
+    """DuckDB function for mapping fund names to ticker symbols"""
+    if name in TR_FUNDS:
         return TR_FUNDS[name]
     return name
 
@@ -90,6 +97,7 @@ TR_COLUMNS: Dict[str, str] = {
 
 @dataclass
 class TRowe(ImportSource):
+    """T. Rowe Price transaction table class"""
     filename: str
     conn: DuckDBPyConnection
     log: WFLogger

@@ -1,11 +1,14 @@
+"""
+Internal classes used by other modules.
+"""
 import re
+import os
+from dataclasses import dataclass, field
+from logging import Logger, StreamHandler, Formatter
 from typing import List, Callable, Dict, Any
 from tempfile import mkstemp
 from duckdb.func import FunctionNullHandling, DEFAULT, NATIVE
 from duckdb import DuckDBPyConnection, InvalidInputException
-from dataclasses import dataclass, field
-from logging import Logger, StreamHandler, Formatter
-import os
 
 WF_TYPES = {
     "BUY",
@@ -26,11 +29,15 @@ WF_TYPES = {
 
 @dataclass
 class PreProcessPattern:
+    """
+    A regex pattern/substitution for pre-processing lines before data reshaping.
+    """
     match: str
     sub: str
     log: Logger = field(default_factory=lambda: WFLogger("main"))
 
     def exec(self, line: str) -> str:
+        """executes the substitution against the given line"""
         if self.match == "":
             self.log.debug("match empty; skipping substitution")
             return line
@@ -41,6 +48,9 @@ class PreProcessPattern:
 
 @dataclass
 class DuckDbFunction:
+    """
+    Base class for functions to be created within DuckDB tables.
+    """
     name: str
     function: Callable
     params: list[Any]
@@ -49,7 +59,12 @@ class DuckDbFunction:
 
 
 @dataclass
-class ImportSource:
+class ImportSource: #pylint: disable=R0902
+    """
+    Vendor-independent base class for all data imports.
+    After data class initialization, a temp file is always created for
+    intermediate processing.
+    """
     filename: str
     conn: DuckDBPyConnection
     log: WFLogger
@@ -62,13 +77,14 @@ class ImportSource:
 
     def __post_init__(self):
         _, self.temp_filename = mkstemp(
-            prefix=f"{self.source_name}-", suffix=".csv", text=True
+            prefix=f"{self.source_name}-", text=True
         )
         self.log.info(f"created temp file {self.temp_filename}")
 
     def pre_process(self):
+        """executes all stored pre-processing substitutions"""
         self.log.info("beginning pre-processing")
-        with open(self.filename) as _c:
+        with open(self.filename, encoding="utf-8") as _c:
             lines: list[str] = []
             for line in _c.readlines():
                 if re.search(self.start_row_regex, line) is not None:
@@ -82,7 +98,7 @@ class ImportSource:
                     line = func.exec(line)
                 if line != "":
                     lines.append(line)
-        with open(self.temp_filename, "w") as _temp:
+        with open(self.temp_filename, "w", encoding="utf-8") as _temp:
             self.log.info(f"writing temp file {self.temp_filename}")
             _temp.writelines(lines)
             _temp.flush()
@@ -99,6 +115,7 @@ class ImportSource:
             )
 
     def import_csv(self):
+        """imports given file into internal DuckDB table"""
         self.log.info(f"importing csv from {self.filename}")
         try:
             table = self.conn.read_csv(
@@ -120,7 +137,8 @@ class ImportSource:
 
 
 class WFLogger(Logger):
-    def init(self):
+    """Base logging class to be passed into other classes."""
+    def __post_init__(self):
         h = StreamHandler()
         f = Formatter(
             "{levelname:s} - {filename:s}:{lineno:d} ({funcName:s}) - {message:s}",
