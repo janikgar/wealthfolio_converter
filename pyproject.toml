@@ -1,5 +1,5 @@
 [project]
-name = "wf-converter"
+name = "wealthfolio_converter"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -13,8 +13,27 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "bandit>=1.9.4",
     "black>=26.5.1",
     "pylint[spelling]>=4.0.7",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
 ]
+
+[tool.bandit]
+skips = [
+    # "B101",
+]
+
+[tool.bandit.assert_used]
+skips = [
+    "test_*.py",
+]
+
+[tool.pytest]
+addopts = [
+    "-v",
+    "--cov",
+    "--cov-report=html"
+]
+verbosity_subtests = "0"

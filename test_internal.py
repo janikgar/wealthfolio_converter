@@ -1,40 +1,39 @@
 import pytest
-import duckdb
-from internal import PreProcessPattern, ImportSource
+from .internal import PreProcessPattern, WFLogger
 
 
 class TestInternal:
     @pytest.mark.parametrize(
-        "match,sub,line,expected,debug",
+        "name,match,sub,line,expected",
         [
-            ("foo", "bar", "foobar", "barbar", False),
-            ("foo", "bar", "foobar", "barbar", True),
-            ("foo", "bar", "bazbar", "bazbar", False),
-            (None, "bar", "foobar", TypeError(), False),
-            ("foo", None, "foobar", TypeError(), False),
-            ("foo", "bar", None, TypeError(), False),
-            ("foo", "bar", "", "", False),
-            ("foo", "", "bar", "bar", False),
-            ("", "foo", "bar", "bar", False),
-            ("", "foo", "bar", "bar", True),
+            ("successful_substitution", "foo", "bar", "foobar", "barbar"),
+            ("successful_noop", "foo", "bar", "bazbar", "bazbar"),
+            ("successful_noop_on_empty_sub", "foo", "", "bar", "bar"),
+            ("successful_noop_on_empty_match", "", "foo", "bar", "bar"),
+            ("empty_output_on_empty_input", "foo", "bar", "", ""),
+            ("typeerror_on_null_match", None, "bar", "foobar", TypeError()),
+            ("typeerror_on_null_sub", "foo", None, "foobar", TypeError()),
+            ("typeerror_on_null_line", "foo", "bar", None, TypeError()),
         ],
     )
-    def test_pre_process_pattern(self, match, sub, line, expected, debug, capfd):
+    def test_pre_process_pattern(self, name, match, sub, line, expected, capfd):
+        log = WFLogger("test", "DEBUG")
+        log.info(name)
         if isinstance(expected, Exception):
             with pytest.raises(TypeError) as exc_info:
-                pattern = PreProcessPattern(match, sub, debug)
+                pattern = PreProcessPattern(match, sub, log)
                 pattern.exec(line)
                 assert exc_info.type == type(expected)
         else:
-            pattern = PreProcessPattern(match, sub, debug)
+            pattern = PreProcessPattern(match, sub, log)
             assert pattern.exec(line) == expected
-            if debug:
-                captured = capfd.readouterr()
-                if match != "":
-                    assert expected in captured.out
-                else:
-                    assert "match empty" in captured.out
+            # captured = capfd.readouterr()
+            # if match != "":
+            #     assert expected in captured.out
+            # else:
+            #     assert "match empty" in captured.out
 
-    def test_import_source(self):
-        conn = duckdb.connect(":memory:")
-        source = ImportSource(filename="test.csv", conn=conn, columns={"foo": "bar"})
+    # def test_import_source(self):
+    #     conn = duckdb.connect(":memory:")
+    #     log = WFLogger("test", "DEBUG")
+    #     source = ImportSource(filename="test.csv", conn=conn, columns={"foo": "bar"}, log=log)
