@@ -51,6 +51,7 @@ def parse_args() -> Namespace:
 
 if __name__ == "__main__":
     log = WFLogger("main", "DEBUG")
+    log.init()
     args = parse_args()
 
     s3_input_bucket: S3Bucket | None = None

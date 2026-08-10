@@ -33,7 +33,7 @@ skips = [
 [tool.pytest]
 addopts = [
     "-v",
-    "--cov",
+    "--cov=wealthfolio_converter",
     "--cov-report=html"
 ]
-verbosity_subtests = "0"
+verbosity_subtests = "1"

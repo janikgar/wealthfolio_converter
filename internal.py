@@ -8,7 +8,7 @@ from logging import Logger, StreamHandler, Formatter
 from typing import List, Callable, Dict, Any
 from tempfile import mkstemp
 from duckdb.func import FunctionNullHandling, DEFAULT, NATIVE
-from duckdb import DuckDBPyConnection, InvalidInputException
+from duckdb import DuckDBPyConnection, DatabaseError
 
 WF_TYPES = {
     "BUY",
@@ -87,7 +87,7 @@ class ImportSource: #pylint: disable=R0902
         with open(self.filename, encoding="utf-8") as _c:
             lines: list[str] = []
             for line in _c.readlines():
-                if re.search(self.start_row_regex, line) is not None:
+                if self.start_row_regex != "" and re.search(self.start_row_regex, line) is not None:
                     lines.clear()
                 if (
                     re.search(self.stop_before_row_regex, line) is not None
@@ -128,17 +128,17 @@ class ImportSource: #pylint: disable=R0902
             table.to_table("transactions")
             self.log.info(f"cleaning up {self.temp_filename}")
             os.unlink(self.temp_filename)
-        except InvalidInputException as _e:
+        except DatabaseError as _e:
             self.log.error(
                 f"DuckDB exception; temp file {self.temp_filename} remains for debugging"
             )
-            print(self.temp_filename)
             raise _e
 
 
 class WFLogger(Logger):
     """Base logging class to be passed into other classes."""
-    def __post_init__(self):
+    def init(self):
+        """Instantiate class-specific logging"""
         h = StreamHandler()
         f = Formatter(
             "{levelname:s} - {filename:s}:{lineno:d} ({funcName:s}) - {message:s}",
