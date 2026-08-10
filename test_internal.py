@@ -22,10 +22,9 @@ class TestInternal:
         log.init()
         log.info(name)
         if isinstance(expected, Exception):
-            with pytest.raises(TypeError) as exc_info:
+            with pytest.raises(TypeError, check=lambda e: isinstance(e, TypeError)):
                 pattern = PreProcessPattern(match, sub, log)
                 pattern.exec(line)
-                assert exc_info.type == type(expected)
         else:
             pattern = PreProcessPattern(match, sub, log)
             assert pattern.exec(line) == expected

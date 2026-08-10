@@ -32,7 +32,6 @@ skips = [
 
 [tool.pytest]
 addopts = [
-    "-v",
     "--cov=wealthfolio_converter",
     "--cov-report=html"
 ]

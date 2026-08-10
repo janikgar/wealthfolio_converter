@@ -12,10 +12,10 @@ from duckdb import DuckDBPyRelation
 from duckdb.func import SPECIAL
 
 from .internal import (
+    WF_TYPES,
     ImportSource,
     PreProcessPattern,
     DuckDbFunction,
-    WF_TYPES,
     CommonConfig,
 )
 

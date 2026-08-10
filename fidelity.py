@@ -115,15 +115,18 @@ def fd_map_exchange_activity(amount: Decimal, symbol: str, action: str) -> str:
         if symbol == "BROKERAGELINK":
             if amount < 0:
                 return_type = "WITHDRAWAL"
-            return_type = "DEPOSIT"
-        if amount < 0:
+            else:
+                return_type = "DEPOSIT"
+        elif amount < 0:
             return_type = "BUY"
-        return_type = "SELL"
+        else:
+            return_type = "SELL"
 
     if re.match("Realized", action):
         if amount < 0:
             return_type = "WITHDRAWAL"
-        return_type = "DEPOSIT"
+        else:
+            return_type = "DEPOSIT"
     return return_type
 
 
@@ -134,12 +137,12 @@ def fd_coalesce_missing_unit_price(
     DuckDB function to determine sane default values for unit prices (often
     useful for cash transactions or money market funds)
     """
+    if unit_price == 0 and quantity == 0:
+        return amount
     if not quantity:
         quantity = Decimal("1")
     if not amount:
         amount = Decimal("1")
-    if unit_price == 0 and quantity == 0:
-        return amount
     if unit_price == 0 or unit_price is None:
         return amount / quantity
 
@@ -206,6 +209,12 @@ class Fidelity(ImportSource):
     db_functions: list[DuckDbFunction] = field(
         default_factory=lambda: DEFAULT_FUNCTIONS
     )
+
+    def __post_init__(self):
+        self.mktemp()
+        self.common.source_name = self.source_name
+        self.common.start_row_regex = self.start_row_regex
+        self.common.stop_before_row_regex = self.stop_before_row_regex
 
     def reshape(self) -> DuckDBPyRelation:
         """Reshape function for Fidelity"""

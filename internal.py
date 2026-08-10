@@ -82,6 +82,9 @@ class ImportSource:  # pylint: disable=R0902
     columns: Dict[str, str] = field(default_factory=Dict[str, str])
 
     def __post_init__(self):
+        self.mktemp()
+
+    def mktemp(self):
         _, self.temp_filename = mkstemp(
             prefix=f"{self.common.source_name}-", text=True
         )
