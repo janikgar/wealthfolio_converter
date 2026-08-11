@@ -18,28 +18,33 @@ class S3Exception(Exception):
 
 
 @dataclass
+class S3Config:
+    """S3 API configuration"""
+    aws_access_key_id: str
+    aws_secret_access_key: str
+    region_name: str
+    config: Config
+    endpoint_url: str = ""
+
+
+@dataclass
 class S3Bucket:
     """S3 class for connecting to buckets"""
     bucket: str
     log: WFLogger
+    s3_config: S3Config
     input_path: str = ""
 
     def __post_init__(self):
-        load_dotenv()
         session = Session()
 
         client = session.create_client(
-            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-            service_name='s3',
-            region_name='homelab',
-            endpoint_url='http://192.168.1.28:30900',
-            config=Config(
-                region_name='homelab',
-                s3={
-                    'addressing_style': 'path'
-                },
-            ),
+            service_name="s3",
+            aws_access_key_id=self.s3_config.aws_access_key_id,
+            aws_secret_access_key=self.s3_config.aws_secret_access_key,
+            region_name=self.s3_config.region_name,
+            endpoint_url=self.s3_config.endpoint_url,
+            config=self.s3_config.config,
         )
 
         try:

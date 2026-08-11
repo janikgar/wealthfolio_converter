@@ -5,7 +5,7 @@ from wealthfolio_converter.internal import PreProcessPattern, WFLogger, ImportSo
 
 class TestInternal:
     @pytest.mark.parametrize(
-        "name,match,sub,line,expected",
+        "_,match,sub,line,expected",
         [
             ("successful_substitution", "foo", "bar", "foobar", "barbar"),
             ("successful_noop", "foo", "bar", "bazbar", "bazbar"),
@@ -17,10 +17,9 @@ class TestInternal:
             ("typeerror_on_null_line", "foo", "bar", None, TypeError()),
         ],
     )
-    def test_pre_process_pattern(self, name, match, sub, line, expected):
+    def test_pre_process_pattern(self, _, match, sub, line: str, expected: str | Exception):
         log = WFLogger("test", "DEBUG")
         log.init()
-        log.info(name)
         if isinstance(expected, Exception):
             with pytest.raises(TypeError, check=lambda e: isinstance(e, TypeError)):
                 pattern = PreProcessPattern(match, sub, log)

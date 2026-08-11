@@ -10,9 +10,11 @@ from argparse import ArgumentParser, Namespace
 from tempfile import NamedTemporaryFile
 
 import duckdb
+from dotenv import load_dotenv
+from botocore.config import Config
 
 from wealthfolio_converter.internal import ImportSource, WFLogger, CommonConfig
-from wealthfolio_converter.s3 import S3Bucket
+from wealthfolio_converter.s3 import S3Bucket, S3Config
 from wealthfolio_converter.vanguard import Vanguard
 from wealthfolio_converter.fidelity import Fidelity
 from wealthfolio_converter.trowe import TRowe
@@ -53,6 +55,20 @@ if __name__ == "__main__":
     log = WFLogger("main", "DEBUG")
     log.init()
     args = parse_args()
+    load_dotenv()
+
+    s3_config = S3Config(
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID', ''),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY', ''),
+        region_name='homelab',
+        endpoint_url='192.168.1.28:30900',
+        config=Config(
+            region_name='homelab',
+            s3={
+                'addressing_style': 'path'
+            }
+        )
+    )
 
     s3_input_bucket: S3Bucket | None = None
     s3_pattern = re.compile(
@@ -60,7 +76,8 @@ if __name__ == "__main__":
     s3_input_match = s3_pattern.fullmatch(args.input)
     if s3_input_match:
         log.info("detected S3 input path")
-        s3_input_bucket = S3Bucket(s3_input_match.group('bucket_name'), log)
+        s3_input_bucket = S3Bucket(
+            s3_input_match.group('bucket_name'), log, s3_config)
         s3_input_bucket.download_path(s3_input_match.group('object_path'))
         args.input = s3_input_bucket.temp_filename
 
@@ -104,7 +121,8 @@ if __name__ == "__main__":
     s3_output_match = s3_pattern.fullmatch(args.output)
     if s3_output_match:
         log.info("detected S3 output path")
-        s3_output_bucket = S3Bucket(s3_output_match.group('bucket_name'), log)
+        s3_output_bucket = S3Bucket(
+            s3_output_match.group('bucket_name'), log, s3_config)
         with NamedTemporaryFile(mode="w+") as _o:
             output_table.to_csv(_o.name)
             s3_output_bucket.upload_path(

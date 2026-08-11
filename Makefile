@@ -1,3 +1,6 @@
+.PHONY: testall
+testall: lint sast test
+
 lint:
 	pylint *.py
 
@@ -6,5 +9,3 @@ test:
 
 sast:
 	bandit -c pyproject.toml -r .
-
-testall: lint sast test
