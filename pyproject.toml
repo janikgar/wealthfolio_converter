@@ -24,10 +24,7 @@ dev = [
 
 [tool.bandit]
 targets = ["."]
-exclude_dirs = [".venv"]
-
-[tool.bandit.assert_used]
-skips = ["tests", "*/*_test.py", "*/test_*.py"]
+exclude_dirs = [".venv", "test"]
 
 [tool.pytest]
 addopts = ["--cov=wealthfolio_converter", "--cov-report=html", "--local-badge-output-dir=badges/"]

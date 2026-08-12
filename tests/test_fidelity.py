@@ -138,7 +138,6 @@ Run Date,Account,Account Number,Action,Symbol,Description,Type,Exchange Quantity
         fd_instance.pre_process()
         fd_instance.import_csv()
         reshaped = fd_instance.reshape()
-        print(reshaped.columns)
         assert len(reshaped.fetchall()) == 3
         assert reshaped.select("amount").fetchall() == [(
             Decimal('2.250'),), (Decimal('-0.070'),), (Decimal('0.070'),)]

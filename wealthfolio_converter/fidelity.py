@@ -7,7 +7,12 @@ from typing import Dict
 from decimal import Decimal
 from duckdb import DuckDBPyRelation
 from duckdb.func import SPECIAL
-from .internal import ImportSource, PreProcessPattern, DuckDbFunction, WF_TYPES
+from wealthfolio_converter.internal import (
+    ImportSource,
+    PreProcessPattern,
+    DuckDbFunction,
+    WF_TYPES,
+)
 
 FD_FUNDS: Dict[str, str] = {
     "AF EUPAC FUND R6": "RERGX",
@@ -82,7 +87,7 @@ def fd_map_activity_types(action: str) -> str:
         action = "TRANSFER IN"
 
     if re.match(
-        r"(WITHDRAWALS|DIRECT DEBIT|DEBIT CARD PURCHASE|Electronic Funds Transfer Paid|" \
+        r"(WITHDRAWALS|DIRECT DEBIT|DEBIT CARD PURCHASE|Electronic Funds Transfer Paid|"
         "CASH ADVANCE)",
         action,
     ):
@@ -211,10 +216,10 @@ class Fidelity(ImportSource):
     )
 
     def __post_init__(self):
-        self.mktemp()
         self.common.source_name = self.source_name
         self.common.start_row_regex = self.start_row_regex
         self.common.stop_before_row_regex = self.stop_before_row_regex
+        self.mktemp()
 
     def reshape(self) -> DuckDBPyRelation:
         """Reshape function for Fidelity"""

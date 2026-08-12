@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict
 import re
 from duckdb import DuckDBPyRelation
-from .internal import ImportSource, PreProcessPattern, DuckDbFunction
+from wealthfolio_converter.internal import ImportSource, PreProcessPattern, DuckDbFunction
 
 TR_FUNDS: Dict[str, str] = {
     "DODGE & COX INCOME X": "DODIX",
@@ -100,13 +100,18 @@ class TRowe(ImportSource):
     """T. Rowe Price transaction table class"""
     columns: Dict[str, str] = field(default_factory=lambda: TR_COLUMNS)
     source_name: str = "trowe"
-    start_row_regex: str = r"Activity Type"
+    start_row_regex: str = "Activity Type"
     pre_process_funcs: list[PreProcessPattern] = field(
         default_factory=lambda: DEFAULT_PREPROCESS
     )
     db_functions: list[DuckDbFunction] = field(
         default_factory=lambda: DEFAULT_FUNCTIONS
     )
+
+    def __post_init__(self):
+        self.common.source_name = self.source_name
+        self.common.start_row_regex = self.start_row_regex
+        self.mktemp()
 
     def reshape(self) -> DuckDBPyRelation:
         """Reshape function for T. Rowe Price"""

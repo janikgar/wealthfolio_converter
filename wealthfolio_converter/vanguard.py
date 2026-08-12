@@ -11,7 +11,7 @@ from typing import Dict
 from duckdb import DuckDBPyRelation
 from duckdb.func import SPECIAL
 
-from .internal import (
+from wealthfolio_converter.internal import (
     WF_TYPES,
     ImportSource,
     PreProcessPattern,

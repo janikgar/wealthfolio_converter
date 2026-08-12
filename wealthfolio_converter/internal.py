@@ -87,7 +87,7 @@ class ImportSource:  # pylint: disable=R0902
     def mktemp(self):
         """mint temporary file for intermediate processing"""
         _, self.temp_filename = mkstemp(
-            prefix=f"{self.common.source_name}-", text=True
+            prefix=f"{self.common.source_name}-", suffix=".csv", text=True
         )
         self.common.log.info(f"created temp file {self.temp_filename}")
 
