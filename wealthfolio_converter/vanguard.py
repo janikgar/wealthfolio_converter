@@ -197,12 +197,12 @@ class Vanguard(ImportSource):
         default_factory=lambda: DEFAULT_FUNCTIONS
     )
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.common.source_name = self.source_name
         self.common.start_row_regex = self.start_row_regex
         self.mktemp()
 
-    def xlsx_to_csv(self):
+    def xlsx_to_csv(self) -> None:
         """Utility class for converting Excel XLSX to CSV"""
         self.common.log.info("converting Vanguard xlsx to csv")
         self.common.conn.install_extension("excel")

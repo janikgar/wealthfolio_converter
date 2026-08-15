@@ -17,7 +17,7 @@ mock_config = S3Config(
 
 @mock_aws
 class TestS3:
-    def init(self):
+    def init(self) -> None:
         client = boto3.client('s3', region_name='us-east-1')
         client.create_bucket(Bucket='test_bucket')
         client.put_object(Bucket='test_bucket',
@@ -38,7 +38,7 @@ class TestS3:
             with pytest.raises(S3Exception, match=expected_err):
                 S3Bucket('bad_bucket', self.log, mock_config)
         else:
-            mock_config.endpoint_url = self.setup_client._endpoint.host
+            mock_config.endpoint_url = self.setup_client.meta.endpoint_url
             S3Bucket('test_bucket', self.log, mock_config)
 
     @pytest.mark.parametrize('_,filename,expected_err', [
@@ -48,7 +48,7 @@ class TestS3:
     def test_s3_bucket_download_path(self, _, filename: str, expected_err: str | None):
         self.init()
 
-        mock_config.endpoint_url = self.setup_client._endpoint.host
+        mock_config.endpoint_url = self.setup_client.meta.endpoint_url
         mock_bucket = S3Bucket('test_bucket', self.log, mock_config)
         if expected_err:
             with pytest.raises(Exception, match=expected_err):
@@ -68,7 +68,7 @@ bin
 stop before this row""")
 
         mock_bucket = S3Bucket('test_bucket', self.log, mock_config)
-        mock_config.endpoint_url = self.setup_client._endpoint.host
+        mock_config.endpoint_url = self.setup_client.meta.endpoint_url
 
         if expected_err:
             with pytest.raises(S3Exception, match=expected_err):

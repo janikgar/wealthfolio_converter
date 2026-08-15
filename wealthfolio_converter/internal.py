@@ -70,28 +70,28 @@ class CommonConfig:
 
 
 @dataclass
-class ImportSource:  # pylint: disable=R0902
+class ImportSource:
     """
     Vendor-independent base class for all data imports.
     After data class initialization, a temp file is always created for
     intermediate processing.
     """
     common: CommonConfig
-    pre_process_funcs: List[PreProcessPattern] = field(default_factory=list)
-    db_functions: list[DuckDbFunction] = field(default_factory=list)
+    db_functions: list[DuckDbFunction] = field(default_factory=list[DuckDbFunction])
+    pre_process_funcs: List[PreProcessPattern] = field(default_factory=list[PreProcessPattern])
     columns: Dict[str, str] = field(default_factory=Dict[str, str])
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.mktemp()
 
-    def mktemp(self):
+    def mktemp(self) -> None:
         """mint temporary file for intermediate processing"""
         _, self.temp_filename = mkstemp(
             prefix=f"{self.common.source_name}-", suffix=".csv", text=True
         )
         self.common.log.info(f"created temp file {self.temp_filename}")
 
-    def pre_process(self):
+    def pre_process(self) -> None:
         """executes all stored pre-processing substitutions"""
         self.common.log.info("beginning pre-processing")
         with open(self.common.filename, encoding="utf-8") as _c:
@@ -127,7 +127,7 @@ class ImportSource:  # pylint: disable=R0902
                 null_handling=func.null_handling,
             )
 
-    def import_csv(self):
+    def import_csv(self) -> None:
         """imports given file into internal DuckDB table"""
         self.common.log.info(f"importing csv from {self.common.filename}")
         try:
@@ -151,7 +151,7 @@ class ImportSource:  # pylint: disable=R0902
 class WFLogger(Logger):
     """Base logging class to be passed into other classes."""
 
-    def init(self):
+    def init(self) -> None:
         """Instantiate class-specific logging"""
         h = StreamHandler()
         f = Formatter(

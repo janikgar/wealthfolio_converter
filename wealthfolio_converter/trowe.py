@@ -108,7 +108,7 @@ class TRowe(ImportSource):
         default_factory=lambda: DEFAULT_FUNCTIONS
     )
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.common.source_name = self.source_name
         self.common.start_row_regex = self.start_row_regex
         self.mktemp()

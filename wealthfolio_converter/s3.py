@@ -2,11 +2,12 @@
 Utility module for interacting with S3-stored files. This implementation
 is created with Minio/Silo in mind, but uses Boto3.
 """
-import os
+from types_boto3_s3 import S3Client
+from types_boto3_s3.type_defs import GetObjectOutputTypeDef
 from dataclasses import dataclass
 from tempfile import mkstemp
+import boto3
 from botocore.config import Config
-from botocore.session import Session
 from botocore.exceptions import ClientError
 from botocore.response import StreamingBody
 from wealthfolio_converter.internal import WFLogger
@@ -34,11 +35,9 @@ class S3Bucket:
     s3_config: S3Config
     input_path: str = ""
 
-    def __post_init__(self):
-        session = Session()
-
-        client = session.create_client(
-            service_name="s3",
+    def __post_init__(self) -> None:
+        client: S3Client = boto3.client(
+            's3',
             aws_access_key_id=self.s3_config.aws_access_key_id,
             aws_secret_access_key=self.s3_config.aws_secret_access_key,
             region_name=self.s3_config.region_name,
@@ -59,7 +58,7 @@ class S3Bucket:
             prefix=f"{self.bucket}-", text=True
         )
 
-    def download_path(self, path: str):
+    def download_path(self, path: str) -> None:
         """
         Method for downloading a remote path. Stores in a temporary file to be
         cleaned up manually later (since it needs to be used by other classes)
@@ -71,7 +70,7 @@ class S3Bucket:
                 f'could not connect to object s3://{self.bucket}/{path}: {_e}') from _e
         self.input_path = path
 
-        get_output: dict = self.client.get_object(
+        get_output: GetObjectOutputTypeDef = self.client.get_object(
             Bucket=self.bucket, Key=self.input_path)
 
         with open(self.temp_filename, 'wb') as _f:
@@ -81,7 +80,7 @@ class S3Bucket:
             self.log.info(
                 f'wrote {len(output_lines)} lines to {self.temp_filename}')
 
-    def upload_path(self, local_path: str, remote_path: str):
+    def upload_path(self, local_path: str, remote_path: str) -> None:
         """
         Method for uploading to a remote path. Takes in a local path
         (likely an externally-created temp file).

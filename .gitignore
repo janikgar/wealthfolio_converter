@@ -10,3 +10,4 @@ inputs/vanguard-xlsx/*
 !**/.gitkeep
 outputs/
 __pycache__/
+.mypy_cache/

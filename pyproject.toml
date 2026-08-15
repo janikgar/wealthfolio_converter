@@ -9,6 +9,7 @@ dependencies = [
     "dotenv>=0.9.9",
     "duckdb>=1.5.4",
     "numpy>=2.5.1",
+    "types-boto3[essential]>=1.43.72",
 ]
 
 [dependency-groups]
@@ -16,6 +17,7 @@ dev = [
     "bandit>=1.9.4",
     "black>=26.5.1",
     "moto[s3]>=5.2.2",
+    "mypy>=2.3.1",
     "pylint[spelling]>=4.0.7",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
@@ -48,3 +50,12 @@ main.ignore-patterns = ["^\\.#", "test_.*\\.py"]
 
 [tool.coverage.run]
 branch = true
+
+[tool.mypy]
+python_version = 3.14
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+exclude = "^tests.*"
+cache_dir = ".mypy_cache"
+incremental = true
+sqlite_cache = true
