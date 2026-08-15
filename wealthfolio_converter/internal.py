@@ -107,8 +107,8 @@ class ImportSource:
                     and self.common.stop_before_row_regex != ""
                 ):
                     break
-                for func in self.pre_process_funcs:
-                    line = func.exec(line)
+                for pre_proc_func in self.pre_process_funcs:
+                    line = pre_proc_func.exec(line)
                 if line != "\n":
                     lines.append(line)
         with open(self.temp_filename, "w", encoding="utf-8") as _temp:
@@ -117,14 +117,14 @@ class ImportSource:
             _temp.flush()
 
         self.common.log.info(f"creating {len(self.db_functions)} DB functions")
-        for func in self.db_functions:
+        for db_func in self.db_functions:
             self.common.conn.create_function(
-                name=func.name,
-                function=func.function,
-                parameters=func.params,
-                return_type=func.return_type,
+                name=db_func.name,
+                function=db_func.function,
+                parameters=db_func.params,
+                return_type=db_func.return_type,
                 type=NATIVE,
-                null_handling=func.null_handling,
+                null_handling=db_func.null_handling,
             )
 
     def import_csv(self) -> None:

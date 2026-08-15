@@ -59,3 +59,5 @@ exclude = "^tests.*"
 cache_dir = ".mypy_cache"
 incremental = true
 sqlite_cache = true
+show_error_code_links = true
+warn_unused_configs = true

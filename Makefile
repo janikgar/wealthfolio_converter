@@ -2,6 +2,7 @@
 testall: lint sast test
 
 lint:
+	mypy .
 	pylint *.py
 
 test:
