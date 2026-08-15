@@ -86,13 +86,13 @@ def vg_coalesce_missing_unit_price(
     DuckDB function to determine sane default values for unit prices (often
     useful for cash transactions or money market funds)
     """
+    if unit_price == 0 and quantity == 0:
+        return amount
     if not quantity:
         quantity = Decimal("1")
     if not amount:
         amount = Decimal("1")
-    if unit_price == 0 and quantity == 0:
-        return amount
-    if unit_price == 0 or unit_price is None:
+    if not unit_price:
         return amount / quantity
 
     return unit_price
@@ -197,6 +197,11 @@ class Vanguard(ImportSource):
         default_factory=lambda: DEFAULT_FUNCTIONS
     )
 
+    def __post_init__(self):
+        self.common.source_name = self.source_name
+        self.common.start_row_regex = self.start_row_regex
+        self.mktemp()
+
     def xlsx_to_csv(self):
         """Utility class for converting Excel XLSX to CSV"""
         self.common.log.info("converting Vanguard xlsx to csv")
@@ -204,7 +209,7 @@ class Vanguard(ImportSource):
         self.common.conn.load_extension("excel")
 
         temp_table = self.common.conn.execute(
-            "SELECT * FROM read_xlsx(?, range = 'A4:J')", [self.common.filename]
+            "SELECT * FROM read_xlsx(?, range = 'A4:J', ignore_errors = true)", [self.common.filename]
         ).fetchall()
 
         self.common.log.info(f"raw XLSX has {len(temp_table)} rows")
