@@ -45,3 +45,6 @@ main.ignore-patterns = ["^\\.#", "test_.*\\.py"]
     "useless-suppression",
     "logging-fstring-interpolation",
 ]
+
+[tool.coverage.run]
+branch = true

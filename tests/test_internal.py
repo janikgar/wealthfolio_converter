@@ -43,6 +43,9 @@ class TestInternal:
     def test_import_source_pre_process(self, tmp_path):
         tmp_file = tmp_path / "test.csv"
         tmp_file.write_text("""foo
+
+
+
 bin""")
         log = WFLogger("test", "DEBUG")
         log.init()

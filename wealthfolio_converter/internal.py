@@ -97,6 +97,7 @@ class ImportSource:  # pylint: disable=R0902
         with open(self.common.filename, encoding="utf-8") as _c:
             lines: list[str] = []
             for line in _c.readlines():
+                self.common.log.debug("current line content: '%s'" % line)
                 if self.common.start_row_regex != "" and \
                         re.search(self.common.start_row_regex, line) is not None:
                     lines.clear()
@@ -108,7 +109,7 @@ class ImportSource:  # pylint: disable=R0902
                     break
                 for func in self.pre_process_funcs:
                     line = func.exec(line)
-                if line != "":
+                if line != "\n":
                     lines.append(line)
         with open(self.temp_filename, "w", encoding="utf-8") as _temp:
             self.common.log.info(f"writing temp file {self.temp_filename}")
