@@ -39,6 +39,7 @@ async def load(input: CustomS3Model) -> JSONResponse:
     responses: dict = {
         'responses': []
     }
+    print(input)
     for r in input.Records:
         response = {}
         response['bucket'] = r.s3.bucket.name
