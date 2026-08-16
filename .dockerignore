@@ -11,4 +11,7 @@ inputs/vanguard-xlsx/*
 outputs/
 __pycache__/
 .mypy_cache/
+tests/
+Dockerfile
+Makefile
 .venv/
