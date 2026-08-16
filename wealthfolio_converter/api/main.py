@@ -1,4 +1,5 @@
 import os
+from urllib.parse import unquote_plus
 from typing import Literal
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -39,11 +40,13 @@ async def load(input: CustomS3Model) -> JSONResponse:
     responses: dict = {
         'responses': []
     }
-    print(input)
     for r in input.Records:
+        print(f"Event Name: {r.eventName}")
+        print(f"Bucket: {r.s3.bucket}")
         response = {}
         response['bucket'] = r.s3.bucket.name
         if r.s3.object:
+            print(f"Object: {unquote_plus(r.s3.object.key)}")
             response['key'] = r.s3.object.key
         responses['responses'].append(response)
     return JSONResponse(content=responses)
