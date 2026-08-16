@@ -3,12 +3,12 @@ lint.txt
 *.csv
 *.xlsx
 **/.coverage
-inputs/fidelity/*
-inputs/trowe/*
-inputs/vanguard/*
-inputs/vanguard-xlsx/*
 !**/.gitkeep
 outputs/
 __pycache__/
 .mypy_cache/
 .venv/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+inputs/

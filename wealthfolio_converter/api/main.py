@@ -4,16 +4,23 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from aws_lambda_powertools.utilities.parser.models.s3 import S3Model, S3RecordModel
 
-openapi_url = "/openapi.json"
+app: FastAPI
 
-if os.getenv("STAGE", "") == "PRODUCTION":
-    openapi_url = None
 
-app = FastAPI(openapi_url=openapi_url)
+def create_app() -> FastAPI:
+    openapi_url = "/openapi.json"
+
+    if os.getenv("STAGE", "") == "PRODUCTION":
+        openapi_url = None
+
+    return FastAPI(openapi_url=openapi_url)
+
+
+app = create_app()
 
 
 class CustomS3RecordModel(S3RecordModel):
-# mypy: disable_error_code=assignment
+    # mypy: disable_error_code=assignment
     eventSource: Literal["aws:s3"] | Literal["minio:s3"] = "aws:s3" # pyright: ignore[reportIncompatibleVariableOverride]
 
 
@@ -29,7 +36,7 @@ async def root() -> JSONResponse:
 
 @app.post('/load')
 async def load(input: CustomS3Model) -> JSONResponse:
-    responses : dict = {
+    responses: dict = {
         'responses': []
     }
     for r in input.Records:
