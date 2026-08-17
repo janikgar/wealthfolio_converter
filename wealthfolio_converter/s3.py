@@ -6,11 +6,11 @@ from types_boto3_s3 import S3Client
 from types_boto3_s3.type_defs import GetObjectOutputTypeDef
 from dataclasses import dataclass
 from tempfile import mkstemp
+from logging import Logger
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
 from botocore.response import StreamingBody
-from wealthfolio_converter.internal import WFLogger
 
 
 class S3Exception(Exception):
@@ -31,7 +31,7 @@ class S3Config:
 class S3Bucket:
     """S3 class for connecting to buckets"""
     bucket: str
-    log: WFLogger
+    log: Logger
     s3_config: S3Config
     input_path: str = ""
 

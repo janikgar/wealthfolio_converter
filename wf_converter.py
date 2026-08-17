@@ -5,16 +5,20 @@ format for ingestion into Wealthfolio (https://wealthfolio.app).
 """
 import sys
 import os
-import re
 from argparse import ArgumentParser, Namespace
-from tempfile import NamedTemporaryFile
 
 import duckdb
 from dotenv import load_dotenv
 from botocore.config import Config
 
-from wealthfolio_converter.internal import ImportSource, WFLogger, CommonConfig
-from wealthfolio_converter.s3 import S3Bucket, S3Config
+from wealthfolio_converter.internal import (
+    ImportSource,
+    WFLogger,
+    CommonConfig,
+    classify_input,
+    save_output,
+)
+from wealthfolio_converter.s3 import S3Config
 from wealthfolio_converter.vanguard import Vanguard
 from wealthfolio_converter.fidelity import Fidelity
 from wealthfolio_converter.trowe import TRowe
@@ -70,23 +74,14 @@ if __name__ == "__main__":
         )
     )
 
-    s3_input_bucket: S3Bucket | None = None
-    s3_pattern = re.compile(
-        r"s3:\/\/(?P<bucket_name>.*?)\/(?P<object_path>.*)")
-    s3_input_match = s3_pattern.fullmatch(args.input)
-    if s3_input_match:
-        log.info("detected S3 input path")
-        s3_input_bucket = S3Bucket(
-            s3_input_match.group('bucket_name'), log, s3_config)
-        s3_input_bucket.download_path(s3_input_match.group('object_path'))
-        args.input = s3_input_bucket.temp_filename
+    input_fn, s3_input_bucket = classify_input(args.input, log, s3_config)
 
     conn = duckdb.connect()
 
     import_object: ImportSource
 
     common_config = CommonConfig(
-        filename=args.input,
+        filename=input_fn,
         conn=conn,
         log=log,
     )
@@ -117,18 +112,7 @@ if __name__ == "__main__":
 
     log.info(f"writing final output to {args.output}")
 
-    s3_output_bucket: S3Bucket | None = None
-    s3_output_match = s3_pattern.fullmatch(args.output)
-    if s3_output_match:
-        log.info("detected S3 output path")
-        s3_output_bucket = S3Bucket(
-            s3_output_match.group('bucket_name'), log, s3_config)
-        with NamedTemporaryFile(mode="w+") as _o:
-            output_table.to_csv(_o.name)
-            s3_output_bucket.upload_path(
-                _o.name, s3_output_match.group('object_path'))
-    else:
-        output_table.to_csv(args.output)
+    s3_output_bucket = save_output(args.output, output_table, log, s3_config)
 
     if s3_input_bucket:
         os.unlink(s3_input_bucket.temp_filename)

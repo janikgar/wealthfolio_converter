@@ -9,7 +9,7 @@ app: FastAPI
 
 
 def create_app() -> FastAPI:
-    openapi_url = "/openapi.json"
+    openapi_url : str | None = "/openapi.json"
 
     if os.getenv("STAGE", "") == "PRODUCTION":
         openapi_url = None
@@ -20,8 +20,8 @@ def create_app() -> FastAPI:
 app = create_app()
 
 
+# mypy: disable_error_code=assignment
 class CustomS3RecordModel(S3RecordModel):
-    # mypy: disable_error_code=assignment
     eventSource: Literal["aws:s3"] | Literal["minio:s3"] = "aws:s3" # pyright: ignore[reportIncompatibleVariableOverride]
 
 

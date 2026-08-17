@@ -4,11 +4,13 @@ Internal classes used by other modules.
 import re
 import os
 from dataclasses import dataclass, field
-from logging import Logger, StreamHandler, Formatter
+from logging import Logger
 from typing import List, Callable, Dict, Any
-from tempfile import mkstemp
+from tempfile import mkstemp, NamedTemporaryFile
 from duckdb.func import FunctionNullHandling, DEFAULT, NATIVE
-from duckdb import DuckDBPyConnection, DatabaseError
+from duckdb import DuckDBPyConnection, DatabaseError, DuckDBPyRelation
+from wealthfolio_converter.s3 import S3Bucket, S3Config
+from wealthfolio_converter.utils import WFLogger
 
 WF_TYPES = {
     "BUY",
@@ -25,6 +27,37 @@ WF_TYPES = {
     "TAX",
     "ADJUSTMENT",
 }
+
+S3_PATTERN = re.compile(
+    r"s3:\/\/(?P<bucket_name>.*?)\/(?P<object_path>.*)")
+
+
+def classify_input(input_filename: str, log: WFLogger, s3_config: S3Config) -> tuple[str, S3Bucket | None]:
+    s3_input_bucket: S3Bucket | None = None
+    s3_input_match = S3_PATTERN.fullmatch(input_filename)
+    if s3_input_match:
+        log.info("detected S3 input path")
+        s3_input_bucket = S3Bucket(
+            s3_input_match.group('bucket_name'), log, s3_config)
+        s3_input_bucket.download_path(s3_input_match.group('object_path'))
+        input_filename = s3_input_bucket.temp_filename
+    return input_filename, s3_input_bucket
+
+
+def save_output(output: str, output_table: DuckDBPyRelation, log: WFLogger, s3_config: S3Config) -> S3Bucket | None:
+    s3_output_bucket: S3Bucket | None = None
+    s3_output_match = S3_PATTERN.fullmatch(output)
+    if s3_output_match:
+        log.info("detected S3 output path")
+        s3_output_bucket = S3Bucket(
+            s3_output_match.group('bucket_name'), log, s3_config)
+        with NamedTemporaryFile(mode="w+") as _o:
+            output_table.to_csv(_o.name)
+            s3_output_bucket.upload_path(
+                _o.name, s3_output_match.group('object_path'))
+    else:
+        output_table.to_csv(output)
+    return s3_output_bucket
 
 
 @dataclass
@@ -146,17 +179,3 @@ class ImportSource:
                 f"DuckDB exception; temp file {self.temp_filename} remains for debugging"
             )
             raise _e
-
-
-class WFLogger(Logger):
-    """Base logging class to be passed into other classes."""
-
-    def init(self) -> None:
-        """Instantiate class-specific logging"""
-        h = StreamHandler()
-        f = Formatter(
-            "{levelname:s} - {filename:s}:{lineno:d} ({funcName:s}) - {message:s}",
-            style="{",
-        )
-        h.setFormatter(f)
-        self.addHandler(h)

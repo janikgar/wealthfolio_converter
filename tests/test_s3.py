@@ -2,7 +2,6 @@ import pytest
 import boto3
 from moto import mock_aws
 from botocore.config import Config
-from botocore.exceptions import ClientError
 from wealthfolio_converter.internal import WFLogger
 from wealthfolio_converter.s3 import S3Bucket, S3Exception, S3Config
 

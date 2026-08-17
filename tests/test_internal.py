@@ -1,9 +1,78 @@
 import pytest
 import duckdb
-from wealthfolio_converter.internal import PreProcessPattern, WFLogger, ImportSource, DuckDbFunction, CommonConfig
+import boto3
+from botocore.config import Config
+from moto import mock_aws
+import duckdb
+from wealthfolio_converter.internal import (
+    PreProcessPattern,
+    WFLogger,
+    ImportSource,
+    DuckDbFunction,
+    CommonConfig,
+    classify_input,
+    save_output,
+)
+from wealthfolio_converter.s3 import S3Config
+
+mock_config = S3Config(
+    aws_access_key_id="qwertyuiop",
+    aws_secret_access_key="asdfghjk",
+    region_name="us-east-1",
+    config=Config(),
+)
 
 
 class TestInternal:
+    @mock_aws
+    @pytest.mark.parametrize("_,input_filename", [
+        ("reg_file", "input.csv"),
+        ("s3_file", "s3://test_bucket/input.csv"),
+    ])
+    def test_classify_input(self, _, input_filename: str):
+        client = boto3.client('s3', region_name='us-east-1')
+        client.create_bucket(Bucket='test_bucket')
+        client.put_object(Bucket='test_bucket',
+                          Key='input.csv', Body='asdf')
+
+        mock_config.endpoint_url = client.meta.endpoint_url
+
+        log = WFLogger("test", "DEBUG")
+        log.init()
+        new_input_fn, bucket = classify_input(input_filename, log, mock_config)
+        if input_filename.startswith("s3"):
+            # assert that temp file is not equal to original filename
+            # skip assertion matching `/tmp`; not platform-independent
+            assert new_input_fn != input_filename
+            assert bucket is not None
+        else:
+            assert new_input_fn == input_filename
+            assert bucket is None
+
+    @mock_aws
+    @pytest.mark.parametrize("_,output_filename", [
+        ("reg_file", "output.csv"),
+        ("s3_file", "s3://test_bucket/output.csv"),
+    ])
+    def test_save_output(self, _, output_filename: str):
+        client = boto3.client('s3', region_name='us-east-1')
+        client.create_bucket(Bucket='test_bucket')
+
+        mock_config.endpoint_url = client.meta.endpoint_url
+
+        log = WFLogger("test", "DEBUG")
+        log.init()
+
+        ddb = duckdb.connect(':memory:')
+        ddb.sql("create table temp as select * from range(1,2) tbl(id)")
+        ddb_table = ddb.table('temp')
+
+        bucket = save_output(output_filename, ddb_table, log, mock_config)
+        if output_filename.startswith('s3'):
+            assert bucket is not None
+        else:
+            assert bucket is None
+
     @pytest.mark.parametrize(
         "_,match,sub,line,expected",
         [
