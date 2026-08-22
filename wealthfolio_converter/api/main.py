@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from aws_lambda_powertools.utilities.parser.models.s3 import S3Model, S3RecordModel
 from botocore.config import Config
 import duckdb
+from dotenv import load_dotenv
 from wealthfolio_converter.internal import S3Config, classify_input, WFLogger, ImportSource, CommonConfig, save_output
 from wealthfolio_converter.vanguard import Vanguard
 from wealthfolio_converter.fidelity import Fidelity
@@ -21,6 +22,8 @@ def create_app() -> FastAPI:
 
     if os.getenv("STAGE", "") == "PRODUCTION":
         openapi_url = None
+
+    load_dotenv()
 
     return FastAPI(openapi_url=openapi_url)
 
@@ -46,7 +49,7 @@ class CustomS3Model(S3Model):
     Records: list[CustomS3RecordModel] # pyright: ignore[reportIncompatibleVariableOverride]
 
 
-class GenericS3Model(SparseS3Event, CustomS3Model):
+class GenericS3Model(SparseS3Event, CustomS3RecordModel, CustomS3Model):
     pass
 
 
@@ -54,7 +57,7 @@ s3_config = S3Config(
     aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID', ''),
     aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY', ''),
     region_name='homelab',
-    endpoint_url='192.168.1.28:30900',
+    endpoint_url='http://192.168.1.28:30900',
     config=Config(
         region_name='homelab',
         s3={
@@ -90,7 +93,7 @@ async def root() -> JSONResponse:
 
 
 @app.post('/load')
-async def load(input_payload: GenericS3Model) -> JSONResponse:
+async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
     responses: dict = {
         'responses': []
     }
@@ -99,7 +102,55 @@ async def load(input_payload: GenericS3Model) -> JSONResponse:
     log.init()
     conn = duckdb.connect()
 
-    if isinstance(input_payload, CustomS3Model):
+    if isinstance(input_payload, CustomS3RecordModel):
+        bucket = input_payload.s3.bucket.name
+        event = input_payload.eventName
+        if event.find("Delete"):
+            return JSONResponse(content={})
+        print(f"Event Name: {event}")
+        print(f"Bucket: {bucket}")
+        if input_payload.s3.object:
+            key = unquote_plus(input_payload.s3.object.key)
+            print(f"Object: {key}")
+
+            bucket_subtype = key.split("/")[1]
+            input_s3_filename = f"s3://{bucket}/{key}"
+
+            input_filename, s3_input_bucket = classify_input(
+                input_s3_filename, log, s3_config)
+
+            output_filename = input_s3_filename.replace("inputs", "outputs")
+
+            import_object: ImportSource | None
+
+            common_config = CommonConfig(
+                filename=input_filename,
+                conn=conn,
+                log=log,
+            )
+
+            import_object = select_format(bucket_subtype, common_config)
+            if not import_object:
+                return JSONResponse(
+                    content={
+                        'error': f'could not determine format from "{bucket_subtype}"'},
+                    status_code=500,
+                )
+
+            print(f"Format: {type(import_object)}")
+
+            import_object.pre_process()
+            import_object.import_csv()
+
+            output_table = import_object.reshape()
+            s3_output_bucket = save_output(output_filename, output_table, log, s3_config)
+
+            if s3_input_bucket:
+                os.unlink(s3_input_bucket.temp_filename)
+            if s3_output_bucket:
+                os.unlink(s3_output_bucket.temp_filename)
+
+    elif isinstance(input_payload, CustomS3Model):
         for r in input_payload.Records:
             print(f"Event Name: {r.eventName}")
             print(f"Bucket: {r.s3.bucket}")

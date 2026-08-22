@@ -86,8 +86,9 @@ class S3Bucket:
         (likely an externally-created temp file).
         """
         try:
-            self.client.put_object(
-                Bucket=self.bucket, Key=remote_path, Body=local_path)
+            with open(local_path) as _p:
+                self.client.put_object(
+                    Bucket=self.bucket, Key=remote_path, Body=_p.read())
             self.log.info(f'uploaded {local_path} to {remote_path}')
         except ClientError as _e:
             raise S3Exception(
