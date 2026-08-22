@@ -1,0 +1,47 @@
+{
+    "eventVersion": "2.0",
+    "eventSource": "minio:s3",
+    "awsRegion": "homelab",
+    "eventTime": "2026-08-22T19:35:11.821Z",
+    "eventName": "s3:ObjectCreated:Put",
+    "userIdentity": {
+        "principalId": "dZhXtsGGKXLaiCWIIhixbLWw2OtNLl2utB1wPoSyjyQ"
+    },
+    "requestParameters": {
+        "principalId": "dZhXtsGGKXLaiCWIIhixbLWw2OtNLl2utB1wPoSyjyQ",
+        "region": "homelab",
+        "sourceIPAddress": "100.68.66.38"
+    },
+    "responseElements": {
+        "x-amz-id-2": "dd9025bab4ad464b049177c95eb6ebf374d3b3fd1af9251148b658df7ac2e3e8",
+        "x-amz-request-id": "18CE37AB76F40D7F",
+        "x-minio-deployment-id": "c5740e52-d78d-4254-8d81-f0157c995810",
+        "x-minio-origin-endpoint": "http://192.168.144.2:9000"
+    },
+    "s3": {
+        "s3SchemaVersion": "1.0",
+        "configurationId": "Config",
+        "bucket": {
+            "name": "wealthfolio-data",
+            "ownerIdentity": {
+                "principalId": "dZhXtsGGKXLaiCWIIhixbLWw2OtNLl2utB1wPoSyjyQ"
+            },
+            "arn": "arn:aws:s3:::wealthfolio-data"
+        },
+        "object": {
+            "key": "inputs%2Ffidelity%2FAccount_History_20260801_20260822.csv",
+            "size": 3230,
+            "eTag": "e476d566985e724c2559d1cffc00ae2f",
+            "contentType": "text/csv",
+            "userMetadata": {
+                "content-type": "text/csv"
+            },
+            "sequencer": "18CE37AB770B54A5"
+        }
+    },
+    "source": {
+        "host": "100.68.66.38",
+        "port": "",
+        "userAgent": "MinIO (linux; amd64) minio-go/v7.0.98 MinIO Console/(dev)"
+    }
+}
