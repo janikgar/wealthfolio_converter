@@ -102,16 +102,23 @@ async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
     log.init()
     conn = duckdb.connect()
 
+    import_object: ImportSource | None
+
     if isinstance(input_payload, CustomS3RecordModel):
         bucket = input_payload.s3.bucket.name
         event = input_payload.eventName
-        if event.find("Delete"):
+        if event.find("Delete") != -1:
             return JSONResponse(content={})
         print(f"Event Name: {event}")
         print(f"Bucket: {bucket}")
+        responses['responses'] = []
         if input_payload.s3.object:
+            r = {}
+            r['bucket'] = bucket
+            r['event'] = event
             key = unquote_plus(input_payload.s3.object.key)
             print(f"Object: {key}")
+            r['key'] = key
 
             bucket_subtype = key.split("/")[1]
             input_s3_filename = f"s3://{bucket}/{key}"
@@ -120,8 +127,6 @@ async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
                 input_s3_filename, log, s3_config)
 
             output_filename = input_s3_filename.replace("inputs", "outputs")
-
-            import_object: ImportSource | None
 
             common_config = CommonConfig(
                 filename=input_filename,
@@ -139,6 +144,8 @@ async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
 
             print(f"Format: {type(import_object)}")
 
+            r['format'] = type(import_object).__name__
+
             import_object.pre_process()
             import_object.import_csv()
 
@@ -150,11 +157,13 @@ async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
             if s3_output_bucket:
                 os.unlink(s3_output_bucket.temp_filename)
 
+            responses['responses'].append(r)
+
     elif isinstance(input_payload, CustomS3Model):
         for r in input_payload.Records:
+            response = {}
             print(f"Event Name: {r.eventName}")
             print(f"Bucket: {r.s3.bucket}")
-            response = {}
             response['bucket'] = r.s3.bucket.name
             response['event'] = r.eventName
             if r.s3.object:
@@ -168,8 +177,6 @@ async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
                     input_s3_filename, log, s3_config)
 
                 output_filename = input_s3_filename.replace("inputs", "outputs")
-
-                import_object: ImportSource | None
 
                 common_config = CommonConfig(
                     filename=input_filename,
@@ -195,6 +202,7 @@ async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
                     os.unlink(s3_input_bucket.temp_filename)
                 if s3_output_bucket:
                     os.unlink(s3_output_bucket.temp_filename)
+            responses['responses'].append(response)
 
     elif isinstance(input_payload, SparseS3Event):
         print(f"Event Name: {input_payload.Event}")
