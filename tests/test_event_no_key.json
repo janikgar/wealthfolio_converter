@@ -1,13 +1,12 @@
 {
-  "EventName": "s3:ObjectCreated:Put",
-  "Key": "test-bucket/image.jpg",
+  "EventName": "s3:BucketUpdated:Put",
   "Records": [
     {
       "eventVersion": "2.0",
       "eventSource": "minio:s3",
       "awsRegion": "",
       "eventTime": "2025-02-06T01:04:31.998Z",
-      "eventName": "s3:ObjectCreated:Put",
+      "eventName": "s3:BucketUpdated:Put",
       "userIdentity": {
         "principalId": "access_key"
       },
@@ -31,16 +30,6 @@
             "principalId": "access_key"
           },
           "arn": "arn:aws:s3:::test-bucket"
-        },
-        "object": {
-          "key": "image.jpg",
-          "size": 84452,
-          "eTag": "eb52f8e46f60a27a8a1a704e25757f30",
-          "contentType": "image/jpeg",
-          "userMetadata": {
-            "content-type": "image/jpeg"
-          },
-          "sequencer": "182178E8B3728CAC"
         }
       },
       "source": {

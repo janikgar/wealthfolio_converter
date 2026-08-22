@@ -179,3 +179,7 @@ class ImportSource:
                 f"DuckDB exception; temp file {self.temp_filename} remains for debugging"
             )
             raise _e
+
+    def reshape(self) -> DuckDBPyRelation:
+        """stub for subclass reshape functions"""
+        return DuckDBPyRelation()

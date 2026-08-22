@@ -24,6 +24,25 @@ from wealthfolio_converter.fidelity import Fidelity
 from wealthfolio_converter.trowe import TRowe
 
 
+def select_format(input_format: str, this_common_config: CommonConfig) -> ImportSource | None:
+    """selector for input format type"""
+    this_import_object: ImportSource | None = None
+    if input_format == "vanguard-xlsx":
+        this_import_object = Vanguard(this_common_config)
+        this_import_object.xlsx_to_csv()
+
+    elif input_format == "vanguard":
+        this_import_object = Vanguard(this_common_config)
+
+    elif input_format == "fidelity":
+        this_import_object = Fidelity(this_common_config)
+
+    elif input_format == "trowe":
+        this_import_object = TRowe(this_common_config)
+
+    return this_import_object
+
+
 def parse_args() -> Namespace:
     """parses command line arguments"""
     ap = ArgumentParser(
@@ -74,33 +93,22 @@ if __name__ == "__main__":
         )
     )
 
-    input_fn, s3_input_bucket = classify_input(args.input, log, s3_config)
+    input_filename, s3_input_bucket = classify_input(args.input, log, s3_config)
 
     conn = duckdb.connect()
 
-    import_object: ImportSource
+    import_object: ImportSource | None
 
     common_config = CommonConfig(
-        filename=input_fn,
+        filename=input_filename,
         conn=conn,
         log=log,
     )
 
     log.info(f"using format {args.format}")
-    if args.format == "vanguard-xlsx":
-        import_object = Vanguard(common_config)
-        import_object.xlsx_to_csv()
+    import_object = select_format(args.format, common_config)
 
-    elif args.format == "vanguard":
-        import_object = Vanguard(common_config)
-
-    elif args.format == "fidelity":
-        import_object = Fidelity(common_config)
-
-    elif args.format == "trowe":
-        import_object = TRowe(common_config)
-
-    else:
+    if not import_object:
         log.error(f"could not parse format {args.format}")
         sys.exit(0)
 

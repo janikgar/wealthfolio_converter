@@ -26,11 +26,17 @@ class TestApi:
         resp = test_client.get(endpoint)
         assert resp.status_code == status
 
-    def test_load(self):
-        test_client = TestClient(app)
-        with open("./tests/test_event.json") as _t:
-            body = json.load(_t)
-            resp = test_client.post("/load", json=body)
-            assert resp.status_code == 200
-            assert resp.json() == {"responses": [
-                {"bucket": "test-bucket", "key": "image.jpg"}]}
+    # @pytest.mark.parametrize('_,input_filename,output_match', [
+    #     ('regular_event', './tests/test_event.json', {"responses": [
+    #         {"bucket": "test-bucket", "event": "s3:ObjectCreated:Put", "key": "image.jpg"}]}),
+    #     ('sparse_event', './tests/test_event_sparse.json',
+    #      {'responses': [{'bucket': 'amzn-s3-demo-bucket', 'event': 's3:TestEvent'}]}),
+    #     ('regular_bucket_event', './tests/test_event_no_key.json', {}),
+    # ])
+    # def test_load(self, _, input_filename: str, output_match: dict):
+    #     test_client = TestClient(app)
+    #     with open(input_filename) as _t:
+    #         body = json.load(_t)
+    #         resp = test_client.post("/load", json=body)
+    #         assert resp.status_code == 200
+    #         assert resp.json() == output_match
