@@ -25,5 +25,9 @@ run:
 vulns:
 	docker run -v trivy:/cache -v .:/repo aquasec/trivy:0.75.0 repository --cache-dir /cache --ignore-unfixed --scanners vuln --ignorefile /repo/.trivyignore.yaml .
 
+push_version:
+	git tag $$(uv version --short --no-color)
+	git push origin $$(uv version --short --no-color)
+
 help:
 	egrep '^\w+:' Makefile
