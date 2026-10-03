@@ -1,9 +1,11 @@
 import os
+import logging
 from urllib.parse import unquote_plus
 from typing import Literal
 from datetime import datetime
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel
 from aws_lambda_powertools.utilities.parser.models.s3 import S3Model, S3RecordModel
 from botocore.config import Config
@@ -85,6 +87,13 @@ def select_format(input_format: str, this_common_config: CommonConfig) -> Import
 
     return this_import_object
 
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    exc_str = f'{exc}'.replace('\n', ' ').replace('   ', ' ')
+    logging.error(f"{request}: {exc_str}")
+    content = {'status_code': 10422, 'message': exc_str, 'data': None}
+    return JSONResponse(content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 # mypy: disable_error_code=
 @app.get('/')

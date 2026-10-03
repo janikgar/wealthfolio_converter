@@ -23,4 +23,7 @@ run:
 	docker run -it --rm --publish 8000:8000 --name wfc localhost/wf_converter:latest
 
 vulns:
-	docker run -v trivy:/cache -v .:/repo aquasec/trivy:0.74.0 repository --cache-dir /cache --ignore-unfixed --scanners vuln --ignorefile /repo/.trivyignore.yaml .
+	docker run -v trivy:/cache -v .:/repo aquasec/trivy:0.75.0 repository --cache-dir /cache --ignore-unfixed --scanners vuln --ignorefile /repo/.trivyignore.yaml .
+
+help:
+	egrep '^\w+:' Makefile
