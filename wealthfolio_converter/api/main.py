@@ -92,8 +92,17 @@ def select_format(input_format: str, this_common_config: CommonConfig) -> Import
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     exc_str = f'{exc}'.replace('\n', ' ').replace('   ', ' ')
     logging.error(f"{request}: {exc_str}")
-    content = {'status_code': 10422, 'message': exc_str, 'data': None}
-    return JSONResponse(content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    content = {'status_code': 422, 'message': exc_str, 'data': None}
+    return JSONResponse(content=content, status_code=status.HTTP_422_UNPROCESSABLE_CONTENT)
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    exc_str = f'{exc}'.replace('\n', ' ').replace('   ', ' ')
+    logging.error(f"{request}: {exc_str}")
+    content = {'status_code': 500, 'message': exc_str, 'data': None}
+    return JSONResponse(content=content, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # mypy: disable_error_code=
 @app.get('/')
@@ -112,6 +121,8 @@ async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
     conn = duckdb.connect()
 
     import_object: ImportSource | None
+
+    print(f"instance is {type(input_payload)}")
 
     if isinstance(input_payload, CustomS3RecordModel):
         bucket = input_payload.s3.bucket.name
