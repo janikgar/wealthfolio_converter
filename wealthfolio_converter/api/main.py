@@ -1,9 +1,9 @@
 import os
 import logging
 from urllib.parse import unquote_plus
-from typing import Literal
+from typing import Literal, Annotated
 from datetime import datetime
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, Header, Body
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel
@@ -27,7 +27,7 @@ def create_app() -> FastAPI:
 
     load_dotenv()
 
-    return FastAPI(openapi_url=openapi_url)
+    return FastAPI(openapi_url=openapi_url, strict_content_type=False)
 
 
 app = create_app()
@@ -111,6 +111,12 @@ async def root() -> JSONResponse:
 
 
 @app.post('/load')
+async def debug(content_type: Annotated[str | None, Header()]) -> JSONResponse:
+    print(content_type)
+    return JSONResponse(content=str(content_type))
+
+
+@app.post('/load2')
 async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
     responses: dict = {
         'responses': []
