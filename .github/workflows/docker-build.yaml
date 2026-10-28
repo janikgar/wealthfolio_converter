@@ -60,14 +60,14 @@ jobs:
       with:
         path: var-lib-apt
         key: var-lib-apt
-    - name: inject var-cache-apt into docker
+    - name: inject caches into docker
       uses: reproducible-containers/buildkit-cache-dance@v3.4.0
       with:
-        cache-map: var-cache-apt
-    - name: inject var-lib-apt into docker
-      uses: reproducible-containers/buildkit-cache-dance@v3.4.0
-      with:
-        cache-map: var-lib-apt
+        cache-map: |
+          {
+            "var-cache-apt": "/var/cache/apt",
+            "var-lib-apt": "/var/lib/apt"
+          }
     - name: Build
       uses: docker/build-push-action@v7
       with:
