@@ -111,9 +111,9 @@ async def root() -> JSONResponse:
 
 
 @app.post('/load')
-async def debug(content_type: Annotated[str | None, Header()]) -> JSONResponse:
-    print(content_type)
-    return JSONResponse(content=str(content_type))
+async def debug(body: Annotated[CustomS3RecordModel | None, Body()]) -> JSONResponse:
+    print(body)
+    return JSONResponse(content=str(body))
 
 
 @app.post('/load2')
