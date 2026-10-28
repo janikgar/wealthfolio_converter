@@ -1,7 +1,7 @@
-FROM dhi.io/python:3.15-debian13@sha256:4d7b6e0efe27a6ab72462dd6e229e6590f43813fab907ecf3bdcdfc3b41e8a06 as base
-FROM dhi.io/python:3.15-debian13-dev@sha256:e1f556371feacccfb5a9d164681228907abcaffd0835683063f22f0e009a8d9d as dev
+FROM dhi.io/python:3.15-debian13@sha256:4d7b6e0efe27a6ab72462dd6e229e6590f43813fab907ecf3bdcdfc3b41e8a06 AS base
+FROM dhi.io/python:3.15-debian13-dev@sha256:e1f556371feacccfb5a9d164681228907abcaffd0835683063f22f0e009a8d9d AS dev
 
-FROM dev as build
+FROM dev AS build
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 ENV UV_NO_DEV=1

@@ -129,9 +129,9 @@ bin""")
         source.pre_process()
         source.import_csv()
         assert conn.table("transactions").columns[0] == "foo"
-        result = conn.sql("SELECT * FROM transactions").fetchone()
+        result = conn.sql("SELECT * FROM transactions").limit(1).fetchall()
         assert result is not None
-        assert result[0] == "bar"
+        assert result[0][0] == "bar"
 
     def test_import_source_start_at_row(self, tmp_path):
         tmp_file = tmp_path / "test.csv"
@@ -150,9 +150,9 @@ bin""")
         source.pre_process()
         source.import_csv()
         assert conn.table("transactions").columns[0] == "foo"
-        result = conn.sql("SELECT * FROM transactions").fetchone()
+        result = conn.sql("SELECT * FROM transactions").limit(1).fetchall()
         assert result is not None
-        assert result[0] == "bin"
+        assert result[0][0] == "bin"
 
     def test_import_source_stop_before_row(self, tmp_path):
         tmp_file = tmp_path / "test.csv"
@@ -171,9 +171,9 @@ stop before this row""")
         source.pre_process()
         source.import_csv()
         assert conn.table("transactions").columns[0] == "foo"
-        result = conn.sql("SELECT * FROM transactions").fetchone()
+        result = conn.sql("SELECT * FROM transactions").limit(1).fetchall()
         assert result is not None
-        assert result[0] == "bin"
+        assert result[0][0] == "bin"
 
     def test_import_source_duckdb_invalid_input(self, tmp_path):
         tmp_file = tmp_path / "test.csv"
@@ -215,8 +215,8 @@ stop before this row""")
         conn.sql("PRAGMA functions").to_table("functions")
         assert len(source.db_functions) == 1
         returned_function = conn.sql(
-            "SELECT * FROM functions WHERE name = 'test_udf'").fetchone()
+            "SELECT * FROM functions WHERE name = 'test_udf'").limit(1).fetchall()
         assert returned_function is not None
         print(returned_function)
-        assert returned_function == ('test_udf', 'SCALAR', [
+        assert returned_function[0] == ('test_udf', 'SCALAR', [
                                      'VARCHAR'], None, 'VARCHAR', False)
