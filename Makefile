@@ -23,7 +23,7 @@ run: # run docker image
 	docker run -it --rm --publish 8000:8000 --name wfc localhost/wf_converter:latest
 
 vulns: # check for vulns
-	docker run -v trivy:/cache -v .:/repo aquasec/trivy:0.76.0 repository --cache-dir /cache --ignore-unfixed --scanners vuln --ignorefile /repo/.trivyignore.yaml .
+	docker run -v trivy:/cache -v .:/repo aquasec/trivy:0.76.1 repository --cache-dir /cache --ignore-unfixed --scanners vuln --ignorefile /repo/.trivyignore.yaml .
 
 push_version: # tag and push a new version
 	git tag v$$(uv version --short --no-color)
