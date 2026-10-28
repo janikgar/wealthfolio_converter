@@ -1,33 +1,33 @@
 .PHONY: testall scanall
-testall: lint test
+testall: lint test # lint type checks and unit tests
 
-scanall: sast vulns
+scanall: sast vulns # static analysis and vuln checks
 
-lint:
+lint: # type checking and general python linting
 	mypy .
 	pylint *.py
 
-test:
+test: # unit tests
 	pytest
 
-sast:
+sast: # static analysis
 	bandit -c pyproject.toml -r .
 
-run_local:
+run_local: # local dev
 	fastapi dev --host 0.0.0.0 wealthfolio_converter/api/main.py
 
-build:
+build: # docker image build
 	docker build -t localhost/wf_converter:latest .
 
-run:
+run: # run docker image
 	docker run -it --rm --publish 8000:8000 --name wfc localhost/wf_converter:latest
 
-vulns:
-	docker run -v trivy:/cache -v .:/repo aquasec/trivy:0.75.0 repository --cache-dir /cache --ignore-unfixed --scanners vuln --ignorefile /repo/.trivyignore.yaml .
+vulns: # check for vulns
+	docker run -v trivy:/cache -v .:/repo aquasec/trivy:0.76.0 repository --cache-dir /cache --ignore-unfixed --scanners vuln --ignorefile /repo/.trivyignore.yaml .
 
-push_version:
+push_version: # tag and push a new version
 	git tag v$$(uv version --short --no-color)
 	git push origin v$$(uv version --short --no-color)
 
-help:
-	egrep '^\w+:' Makefile
+help: # see make options
+	@egrep '^\w+:' Makefile | column -t -s#
