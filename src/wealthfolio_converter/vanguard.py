@@ -148,7 +148,7 @@ def vg_map_activity_types(action: str, quantity: Decimal) -> str:
     return action
 
 
-DEFAULT_PREPROCESS = [
+VG_PREPROCESS = [
     # drop all sweep lines
     PreProcessPattern(r".*(Sweep).*", ""),
     # remove literal dollar signs
@@ -165,7 +165,7 @@ DEFAULT_PREPROCESS = [
     PreProcessPattern(r",(\d+/\d+)/(\d{2}),", r",\1/20\2,"),
 ]
 
-DEFAULT_FUNCTIONS = [
+VG_FUNCTIONS = [
     DuckDbFunction(
         "vg_map_activity_types",
         vg_map_activity_types,
@@ -193,10 +193,10 @@ class Vanguard(ImportSource):
     query: str = VG_QUERY
     columns: Dict[str, str] = field(default_factory=lambda: VG_COLUMNS)
     pre_process_funcs: list[PreProcessPattern] = field(
-        default_factory=lambda: DEFAULT_PREPROCESS
+        default_factory=lambda: VG_PREPROCESS
     )
     db_functions: list[DuckDbFunction] = field(
-        default_factory=lambda: DEFAULT_FUNCTIONS
+        default_factory=lambda: VG_FUNCTIONS
     )
 
     def __post_init__(self) -> None:

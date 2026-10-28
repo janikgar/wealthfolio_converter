@@ -66,14 +66,14 @@ def tr_map_funds(name: str) -> str:
     return name
 
 
-DEFAULT_PREPROCESS = [
+TR_PREPROCESS = [
     # remove literal dollar signs
     PreProcessPattern(r"\$", ""),
     PreProcessPattern(r"^.*(Rounding Adjustment|Market Fluctuation).*", ""),
 ]
 
 
-DEFAULT_FUNCTIONS = [
+TR_FUNCTIONS = [
     DuckDbFunction(
         "tr_map_activity_types",
         tr_map_activity_types,
@@ -108,10 +108,10 @@ class TRowe(ImportSource):
     source_name: str = "trowe"
     start_row_regex: str = "Activity Type"
     pre_process_funcs: list[PreProcessPattern] = field(
-        default_factory=lambda: DEFAULT_PREPROCESS
+        default_factory=lambda: TR_PREPROCESS
     )
     db_functions: list[DuckDbFunction] = field(
-        default_factory=lambda: DEFAULT_FUNCTIONS
+        default_factory=lambda: TR_FUNCTIONS
     )
 
     def __post_init__(self) -> None:

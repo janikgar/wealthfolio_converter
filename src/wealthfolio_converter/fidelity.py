@@ -155,7 +155,7 @@ def fd_coalesce_missing_unit_price(
     return unit_price
 
 
-DEFAULT_FUNCTIONS = [
+FD_FUNCTIONS = [
     DuckDbFunction(
         "fd_map_activity_types", fd_map_activity_types, ["VARCHAR"], "VARCHAR"
     ),
@@ -214,7 +214,7 @@ class Fidelity(ImportSource):
     stop_before_row_regex: str = r"The data and information"
     pre_process_funcs: list[PreProcessPattern] = field(default_factory=list)
     db_functions: list[DuckDbFunction] = field(
-        default_factory=lambda: DEFAULT_FUNCTIONS
+        default_factory=lambda: FD_FUNCTIONS
     )
 
     def __post_init__(self) -> None:
