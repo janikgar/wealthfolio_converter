@@ -1,6 +1,7 @@
 """
 Internal classes used by other modules.
 """
+
 import re
 import os
 from dataclasses import dataclass, field
@@ -28,33 +29,41 @@ WF_TYPES = {
     "ADJUSTMENT",
 }
 
-S3_PATTERN = re.compile(
-    r"s3:\/\/(?P<bucket_name>.*?)\/(?P<object_path>.*)")
+S3_PATTERN = re.compile(r"s3:\/\/(?P<bucket_name>.*?)\/(?P<object_path>.*)")
 
 
-def classify_input(input_filename: str, log: WFLogger, s3_config: S3Config) -> tuple[str, S3Bucket | None]:
+def classify_input(
+    input_filename: str, log: WFLogger, s3_config: S3Config
+) -> tuple[str, S3Bucket | None]:
+    """
+    Classify input as filename or S3 file
+    """
     s3_input_bucket: S3Bucket | None = None
     s3_input_match = S3_PATTERN.fullmatch(input_filename)
     if s3_input_match:
         log.info("detected S3 input path")
-        s3_input_bucket = S3Bucket(
-            s3_input_match.group('bucket_name'), log, s3_config)
-        s3_input_bucket.download_path(s3_input_match.group('object_path'))
+        s3_input_bucket = S3Bucket(s3_input_match.group("bucket_name"), log, s3_config)
+        s3_input_bucket.download_path(s3_input_match.group("object_path"))
         input_filename = s3_input_bucket.temp_filename
     return input_filename, s3_input_bucket
 
 
-def save_output(output: str, output_table: DuckDBPyRelation, log: WFLogger, s3_config: S3Config) -> S3Bucket | None:
+def save_output(
+    output: str, output_table: DuckDBPyRelation, log: WFLogger, s3_config: S3Config
+) -> S3Bucket | None:
+    """
+    Save output as either file or S3
+    """
     s3_output_bucket: S3Bucket | None = None
     s3_output_match = S3_PATTERN.fullmatch(output)
     if s3_output_match:
         log.info("detected S3 output path")
         s3_output_bucket = S3Bucket(
-            s3_output_match.group('bucket_name'), log, s3_config)
+            s3_output_match.group("bucket_name"), log, s3_config
+        )
         with NamedTemporaryFile(mode="w+") as _o:
             output_table.to_csv(_o.name)
-            s3_output_bucket.upload_path(
-                _o.name, s3_output_match.group('object_path'))
+            s3_output_bucket.upload_path(_o.name, s3_output_match.group("object_path"))
     else:
         output_table.to_csv(output)
     return s3_output_bucket
@@ -65,6 +74,7 @@ class PreProcessPattern:
     """
     A regex pattern/substitution for pre-processing lines before data reshaping.
     """
+
     match: str
     sub: str
     log: Logger = field(default_factory=lambda: WFLogger("main"))
@@ -84,6 +94,7 @@ class DuckDbFunction:
     """
     Base class for functions to be created within DuckDB tables.
     """
+
     name: str
     function: Callable
     params: list[Any]
@@ -94,6 +105,7 @@ class DuckDbFunction:
 @dataclass
 class CommonConfig:
     """Common configuration for all ImportSources"""
+
     filename: str
     conn: DuckDBPyConnection
     log: WFLogger
@@ -109,9 +121,12 @@ class ImportSource:
     After data class initialization, a temp file is always created for
     intermediate processing.
     """
+
     common: CommonConfig
     db_functions: list[DuckDbFunction] = field(default_factory=list[DuckDbFunction])
-    pre_process_funcs: List[PreProcessPattern] = field(default_factory=list[PreProcessPattern])
+    pre_process_funcs: List[PreProcessPattern] = field(
+        default_factory=list[PreProcessPattern]
+    )
     columns: Dict[str, str] = field(default_factory=Dict[str, str])
 
     def __post_init__(self) -> None:
@@ -130,13 +145,14 @@ class ImportSource:
         with open(self.common.filename, encoding="utf-8") as _c:
             lines: list[str] = []
             for line in _c.readlines():
-                self.common.log.debug("current line content: '%s'" % line)
-                if self.common.start_row_regex != "" and \
-                        re.search(self.common.start_row_regex, line) is not None:
+                self.common.log.debug("current line content: '%s'", line)
+                if (
+                    self.common.start_row_regex != ""
+                    and re.search(self.common.start_row_regex, line) is not None
+                ):
                     lines.clear()
                 if (
-                    re.search(self.common.stop_before_row_regex,
-                              line) is not None
+                    re.search(self.common.stop_before_row_regex, line) is not None
                     and self.common.stop_before_row_regex != ""
                 ):
                     break

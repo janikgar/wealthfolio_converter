@@ -2,8 +2,7 @@
 Utility module for interacting with S3-stored files. This implementation
 is created with Minio/Silo in mind, but uses Boto3.
 """
-from types_boto3_s3 import S3Client
-from types_boto3_s3.type_defs import GetObjectOutputTypeDef
+
 from dataclasses import dataclass
 from tempfile import mkstemp
 from logging import Logger
@@ -11,6 +10,8 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
 from botocore.response import StreamingBody
+from types_boto3_s3 import S3Client
+from types_boto3_s3.type_defs import GetObjectOutputTypeDef
 
 
 class S3Exception(Exception):
@@ -20,6 +21,7 @@ class S3Exception(Exception):
 @dataclass
 class S3Config:
     """S3 API configuration"""
+
     aws_access_key_id: str
     aws_secret_access_key: str
     region_name: str
@@ -30,6 +32,7 @@ class S3Config:
 @dataclass
 class S3Bucket:
     """S3 class for connecting to buckets"""
+
     bucket: str
     log: Logger
     s3_config: S3Config
@@ -37,7 +40,7 @@ class S3Bucket:
 
     def __post_init__(self) -> None:
         client: S3Client = boto3.client(
-            's3',
+            "s3",
             aws_access_key_id=self.s3_config.aws_access_key_id,
             aws_secret_access_key=self.s3_config.aws_secret_access_key,
             region_name=self.s3_config.region_name,
@@ -49,14 +52,13 @@ class S3Bucket:
             client.head_bucket(Bucket=self.bucket)
         except ClientError as _e:
             raise S3Exception(
-                f'could not connect to bucket {self.bucket}: {_e}') from _e
+                f"could not connect to bucket {self.bucket}: {_e}"
+            ) from _e
 
-        self.log.info(f'connected to bucket {self.bucket}')
+        self.log.info(f"connected to bucket {self.bucket}")
         self.client = client
 
-        _, self.temp_filename = mkstemp(
-            prefix=f"{self.bucket}-", text=True
-        )
+        _, self.temp_filename = mkstemp(prefix=f"{self.bucket}-", text=True)
 
     def download_path(self, path: str) -> None:
         """
@@ -67,18 +69,19 @@ class S3Bucket:
             self.client.head_object(Bucket=self.bucket, Key=path)
         except ClientError as _e:
             raise S3Exception(
-                f'could not connect to object s3://{self.bucket}/{path}: {_e}') from _e
+                f"could not connect to object s3://{self.bucket}/{path}: {_e}"
+            ) from _e
         self.input_path = path
 
         get_output: GetObjectOutputTypeDef = self.client.get_object(
-            Bucket=self.bucket, Key=self.input_path)
+            Bucket=self.bucket, Key=self.input_path
+        )
 
-        with open(self.temp_filename, 'wb') as _f:
-            output: StreamingBody = get_output['Body']
+        with open(self.temp_filename, "wb") as _f:
+            output: StreamingBody = get_output["Body"]
             output_lines = output.readlines()
             _f.writelines(output_lines)
-            self.log.info(
-                f'wrote {len(output_lines)} lines to {self.temp_filename}')
+            self.log.info(f"wrote {len(output_lines)} lines to {self.temp_filename}")
 
     def upload_path(self, local_path: str, remote_path: str) -> None:
         """
@@ -88,8 +91,10 @@ class S3Bucket:
         try:
             with open(local_path) as _p:
                 self.client.put_object(
-                    Bucket=self.bucket, Key=remote_path, Body=_p.read())
-            self.log.info(f'uploaded {local_path} to {remote_path}')
+                    Bucket=self.bucket, Key=remote_path, Body=_p.read()
+                )
+            self.log.info(f"uploaded {local_path} to {remote_path}")
         except ClientError as _e:
             raise S3Exception(
-                f'could not upload {local_path} to {remote_path}: {_e}')from _e
+                f"could not upload {local_path} to {remote_path}: {_e}"
+            ) from _e

@@ -1,4 +1,8 @@
+"""
+Cross-module utilities
+"""
 from logging import Logger, StreamHandler, Formatter
+
 
 class WFLogger(Logger):
     """Base logging class to be passed into other classes."""

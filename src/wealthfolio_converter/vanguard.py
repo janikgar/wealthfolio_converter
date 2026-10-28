@@ -1,6 +1,7 @@
 """
 Defines constants, queries, DuckDB functions, and DTOs for Fidelity
 """
+
 from decimal import Decimal
 import re
 import csv
@@ -185,6 +186,7 @@ DEFAULT_FUNCTIONS = [
 @dataclass
 class Vanguard(ImportSource):
     """Vanguard transaction table class"""
+
     common: CommonConfig
     start_row_regex: str = r"Trade"
     source_name: str = "vanguard"
@@ -209,7 +211,8 @@ class Vanguard(ImportSource):
         self.common.conn.load_extension("excel")
 
         temp_table = self.common.conn.execute(
-            "SELECT * FROM read_xlsx(?, range = 'A4:J', ignore_errors = true)", [self.common.filename]
+            "SELECT * FROM read_xlsx(?, range = 'A4:J', ignore_errors = true)",
+            [self.common.filename],
         ).fetchall()
 
         self.common.log.info(f"raw XLSX has {len(temp_table)} rows")
@@ -236,6 +239,8 @@ class Vanguard(ImportSource):
 
     def reshape(self) -> DuckDBPyRelation:
         """Reshape function for Vanguard"""
-        self.common.log.info(f"reshaping {self.common.source_name}-formatted file to table")
+        self.common.log.info(
+            f"reshaping {self.common.source_name}-formatted file to table"
+        )
         self.common.conn.sql(self.query).to_table(self.common.source_name)
         return self.common.conn.table(self.common.source_name)

@@ -1,11 +1,16 @@
 """
 Defines constants, queries, DuckDB functions, and DTOs for T. Rowe Price
 """
+
 from dataclasses import dataclass, field
 from typing import Dict
 import re
 from duckdb import DuckDBPyRelation
-from wealthfolio_converter.internal import ImportSource, PreProcessPattern, DuckDbFunction
+from wealthfolio_converter.internal import (
+    ImportSource,
+    PreProcessPattern,
+    DuckDbFunction,
+)
 
 TR_FUNDS: Dict[str, str] = {
     "DODGE & COX INCOME X": "DODIX",
@@ -98,6 +103,7 @@ TR_COLUMNS: Dict[str, str] = {
 @dataclass
 class TRowe(ImportSource):
     """T. Rowe Price transaction table class"""
+
     columns: Dict[str, str] = field(default_factory=lambda: TR_COLUMNS)
     source_name: str = "trowe"
     start_row_regex: str = "Activity Type"

@@ -3,7 +3,7 @@ name = "wealthfolio_converter"
 version = "0.2.2"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.15"
 dependencies = [
     "aws-lambda-powertools[parser]>=3.34.0",
     "boto3>=1.43.67",
@@ -37,7 +37,7 @@ addopts = ["--cov=wealthfolio_converter", "--cov-report=html", "--local-badge-ou
 verbosity_subtests = "1"
 
 [tool.pylint]
-main.ignore-patterns = ["^\\.#", "test_.*\\.py"]
+main.ignore-patterns = ["\\.#", "test_.*\\.py"]
 "messages control".disable = [
     "bad-inline-option",
     "deprecated-pragma",
@@ -56,10 +56,10 @@ main.ignore-patterns = ["^\\.#", "test_.*\\.py"]
 branch = true
 
 [tool.mypy]
-python_version = 3.14
+python_version = 3.15
 disallow_untyped_calls = true
 disallow_untyped_defs = true
-exclude = "^tests.*"
+exclude = "^src/tests.*"
 cache_dir = ".mypy_cache"
 incremental = true
 sqlite_cache = true

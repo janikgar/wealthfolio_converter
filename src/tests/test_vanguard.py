@@ -50,7 +50,7 @@ class TestVanguard:
         assert vg_map_activity_types(action, quantity) == return_action
 
     def test_xlsx_to_csv_and_reshape(self):
-        tmp_file = Path("tests") / "example_account.xlsx"
+        tmp_file = Path("src") / Path("tests") / "example_account.xlsx"
         log = WFLogger("test", "DEBUG")
         log.init()
         conn = duckdb.connect(":memory:")

@@ -1,6 +1,7 @@
 """
 Defines constants, queries, DuckDB functions, and DTOs for Fidelity
 """
+
 import re
 from dataclasses import dataclass, field
 from typing import Dict
@@ -206,6 +207,7 @@ FD_COLUMNS: Dict[str, str] = {
 @dataclass
 class Fidelity(ImportSource):
     """Fidelity transaction table class"""
+
     columns: Dict[str, str] = field(default_factory=lambda: FD_COLUMNS)
     source_name: str = "fidelity"
     start_row_regex: str = r"Run Date"

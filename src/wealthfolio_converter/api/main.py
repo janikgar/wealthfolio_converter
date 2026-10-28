@@ -11,7 +11,14 @@ from aws_lambda_powertools.utilities.parser.models.s3 import S3Model, S3RecordMo
 from botocore.config import Config
 import duckdb
 from dotenv import load_dotenv
-from wealthfolio_converter.internal import S3Config, classify_input, WFLogger, ImportSource, CommonConfig, save_output
+from wealthfolio_converter.internal import (
+    S3Config,
+    classify_input,
+    WFLogger,
+    ImportSource,
+    CommonConfig,
+    save_output,
+)
 from wealthfolio_converter.vanguard import Vanguard
 from wealthfolio_converter.fidelity import Fidelity
 from wealthfolio_converter.trowe import TRowe
@@ -44,11 +51,15 @@ class SparseS3Event(BaseModel):
 
 # mypy: disable_error_code=assignment
 class CustomS3RecordModel(S3RecordModel):
-    eventSource: Literal["aws:s3"] | Literal["minio:s3"] = "aws:s3" # pyright: ignore[reportIncompatibleVariableOverride]
+    eventSource: Literal["aws:s3"] | Literal["minio:s3"] = ( # pyright: ignore[reportIncompatibleVariableOverride]
+        "aws:s3"
+    )
 
 
 class CustomS3Model(S3Model):
-    Records: list[CustomS3RecordModel] # pyright: ignore[reportIncompatibleVariableOverride]
+    Records: list[ # pyright: ignore[reportIncompatibleVariableOverride]
+        CustomS3RecordModel
+    ]
 
 
 class GenericS3Model(SparseS3Event, CustomS3RecordModel, CustomS3Model):
@@ -56,20 +67,17 @@ class GenericS3Model(SparseS3Event, CustomS3RecordModel, CustomS3Model):
 
 
 s3_config = S3Config(
-    aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID', ''),
-    aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY', ''),
-    region_name='homelab',
-    endpoint_url='http://192.168.1.28:30900',
-    config=Config(
-        region_name='homelab',
-        s3={
-            'addressing_style': 'path'
-        }
-    )
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID", ""),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY", ""),
+    region_name="homelab",
+    endpoint_url="http://192.168.1.28:30900",
+    config=Config(region_name="homelab", s3={"addressing_style": "path"}),
 )
 
 
-def select_format(input_format: str, this_common_config: CommonConfig) -> ImportSource | None:
+def select_format(
+    input_format: str, this_common_config: CommonConfig
+) -> ImportSource | None:
     """selector for input format type"""
     this_import_object: ImportSource | None = None
     if input_format == "vanguard-xlsx":
@@ -89,38 +97,42 @@ def select_format(input_format: str, this_common_config: CommonConfig) -> Import
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    exc_str = f'{exc}'.replace('\n', ' ').replace('   ', ' ')
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
     logging.error(f"{request}: {exc_str}")
-    content = {'status_code': 422, 'message': exc_str, 'data': None}
-    return JSONResponse(content=content, status_code=status.HTTP_422_UNPROCESSABLE_CONTENT)
+    content = {"status_code": 422, "message": exc_str, "data": None}
+    return JSONResponse(
+        content=content, status_code=status.HTTP_422_UNPROCESSABLE_CONTENT
+    )
 
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    exc_str = f'{exc}'.replace('\n', ' ').replace('   ', ' ')
+    exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
     logging.error(f"{request}: {exc_str}")
-    content = {'status_code': 500, 'message': exc_str, 'data': None}
-    return JSONResponse(content=content, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    content = {"status_code": 500, "message": exc_str, "data": None}
+    return JSONResponse(
+        content=content, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+    )
 
 
 # mypy: disable_error_code=
-@app.get('/')
+@app.get("/")
 async def root() -> JSONResponse:
     return JSONResponse(content={"health": "ok"})
 
 
-@app.post('/load')
+@app.post("/load")
 async def debug(body: Annotated[CustomS3RecordModel | None, Body()]) -> JSONResponse:
     print(body)
     return JSONResponse(content=str(body))
 
 
-@app.post('/load2')
+@app.post("/load2")
 async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
-    responses: dict = {
-        'responses': []
-    }
+    responses: dict = {"responses": []}
 
     log = WFLogger("main", "DEBUG")
     log.init()
@@ -137,20 +149,21 @@ async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
             return JSONResponse(content={})
         print(f"Event Name: {event}")
         print(f"Bucket: {bucket}")
-        responses['responses'] = []
+        responses["responses"] = []
         if input_payload.s3.object:
             r = {}
-            r['bucket'] = bucket
-            r['event'] = event
+            r["bucket"] = bucket
+            r["event"] = event
             key = unquote_plus(input_payload.s3.object.key)
             print(f"Object: {key}")
-            r['key'] = key
+            r["key"] = key
 
             bucket_subtype = key.split("/")[1]
             input_s3_filename = f"s3://{bucket}/{key}"
 
             input_filename, s3_input_bucket = classify_input(
-                input_s3_filename, log, s3_config)
+                input_s3_filename, log, s3_config
+            )
 
             output_filename = input_s3_filename.replace("inputs", "outputs")
 
@@ -164,43 +177,47 @@ async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
             if not import_object:
                 return JSONResponse(
                     content={
-                        'error': f'could not determine format from "{bucket_subtype}"'},
+                        "error": f'could not determine format from "{bucket_subtype}"'
+                    },
                     status_code=500,
                 )
 
             print(f"Format: {type(import_object)}")
 
-            r['format'] = type(import_object).__name__
+            r["format"] = type(import_object).__name__
 
             import_object.pre_process()
             import_object.import_csv()
 
             output_table = import_object.reshape()
-            s3_output_bucket = save_output(output_filename, output_table, log, s3_config)
+            s3_output_bucket = save_output(
+                output_filename, output_table, log, s3_config
+            )
 
             if s3_input_bucket:
                 os.unlink(s3_input_bucket.temp_filename)
             if s3_output_bucket:
                 os.unlink(s3_output_bucket.temp_filename)
 
-            responses['responses'].append(r)
+            responses["responses"].append(r)
 
     elif isinstance(input_payload, CustomS3Model):
         for r in input_payload.Records:
             response = {}
             print(f"Event Name: {r.eventName}")
             print(f"Bucket: {r.s3.bucket}")
-            response['bucket'] = r.s3.bucket.name
-            response['event'] = r.eventName
+            response["bucket"] = r.s3.bucket.name
+            response["event"] = r.eventName
             if r.s3.object:
                 print(f"Object: {unquote_plus(r.s3.object.key)}")
-                response['key'] = r.s3.object.key
+                response["key"] = r.s3.object.key
 
-                bucket_subtype = response['key'].split("/")[1]
+                bucket_subtype = response["key"].split("/")[1]
                 input_s3_filename = f"s3://{response['bucket']}/{response['key']}"
 
                 input_filename, s3_input_bucket = classify_input(
-                    input_s3_filename, log, s3_config)
+                    input_s3_filename, log, s3_config
+                )
 
                 output_filename = input_s3_filename.replace("inputs", "outputs")
 
@@ -214,7 +231,8 @@ async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
                 if not import_object:
                     return JSONResponse(
                         content={
-                            'error': f'could not determine format from "{bucket_subtype}"'},
+                            "error": f'could not determine format from "{bucket_subtype}"'
+                        },
                         status_code=500,
                     )
 
@@ -222,19 +240,23 @@ async def load(input_payload: CustomS3RecordModel) -> JSONResponse:
                 import_object.import_csv()
 
                 output_table = import_object.reshape()
-                s3_output_bucket = save_output(output_filename, output_table, log, s3_config)
+                s3_output_bucket = save_output(
+                    output_filename, output_table, log, s3_config
+                )
 
                 if s3_input_bucket:
                     os.unlink(s3_input_bucket.temp_filename)
                 if s3_output_bucket:
                     os.unlink(s3_output_bucket.temp_filename)
-            responses['responses'].append(response)
+            responses["responses"].append(response)
 
     elif isinstance(input_payload, SparseS3Event):
         print(f"Event Name: {input_payload.Event}")
         print(f"Bucket: {input_payload.Bucket}")
-        responses['responses'].append({
-            'bucket': input_payload.Bucket,
-            'event': input_payload.Event,
-        })
+        responses["responses"].append(
+            {
+                "bucket": input_payload.Bucket,
+                "event": input_payload.Event,
+            }
+        )
     return JSONResponse(content=responses)
