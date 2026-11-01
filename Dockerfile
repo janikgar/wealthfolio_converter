@@ -31,4 +31,4 @@ uv python install
 
 COPY --from=build /app /app
 
-CMD ["fastapi", "run", "wealthfolio_converter/api/main.py"]
+CMD ["fastapi", "run", "src/wealthfolio_converter/api/main.py"]
